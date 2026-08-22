@@ -108,6 +108,32 @@ python manage_prompts.py
 
 The manager can show, rewrite, or reset individual prompt files.
 
+## Railway
+
+The repository contains `railway.json` and a `Dockerfile`, so Railway does not
+depend on Railpack's Python start-command detection. Keep the service root
+directory empty (repository root), or set the config file path to
+`/railway.json`. The container starts with `python -u main.py` and does not need
+a public domain or a `PORT` variable because Telegram is consumed by polling.
+
+At minimum, add these service variables in Railway:
+
+```env
+TELEGRAM_BOT_TOKEN=<fresh BotFather token>
+OPENROUTER_API_KEY=<OpenRouter key>
+ADMIN_USER_IDS=<comma-separated Telegram user ids>
+DATABASE_PATH=/app/data/bot.sqlite3
+LOCAL_IMAGE_DIR=/app/data/images
+```
+
+Attach a Railway Volume at `/app/data`. Without it the bot can start, but the
+SQLite database, admin-panel overrides, message history, and uploaded local
+images are lost when Railway replaces the deployment.
+
+If Railway still reports `No start command detected`, check the deployment's
+commit SHA and source branch. A deployment containing `railway.json` uses the
+Dockerfile builder and therefore never reaches Railpack start-command detection.
+
 ## Image Sources
 
 Local images go into:
