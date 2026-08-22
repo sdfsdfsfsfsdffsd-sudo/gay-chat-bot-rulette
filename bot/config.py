@@ -85,13 +85,11 @@ class Settings:
     joke_params: GenerationParams
     roast_params: GenerationParams
     system_prompt_path: Path | None
-    answer_system_prompt_path: Path | None
     horoscope_prompt_path: Path | None
     joke_prompt_path: Path | None
     summary_prompt_path: Path | None
     conspiracy_prompt_path: Path | None
     roast_prompt_path: Path | None
-    answer_prompt_path: Path | None
 
     @property
     def has_bound_chat(self) -> bool:
@@ -232,14 +230,12 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         horoscope_params=_generation_params("HOROSCOPE", 1.0, get),
         joke_params=_generation_params("JOKE", 1.0, get),
         roast_params=_generation_params("ROAST", 1.0, get),
-        system_prompt_path=_optional_path(get("SYSTEM_PROMPT_PATH", "")),
-        answer_system_prompt_path=_optional_path(get("ANSWER_SYSTEM_PROMPT_PATH", "")),
-        horoscope_prompt_path=_optional_path(get("HOROSCOPE_PROMPT_PATH", "")),
-        joke_prompt_path=_optional_path(get("JOKE_PROMPT_PATH", "")),
-        summary_prompt_path=_optional_path(get("SUMMARY_PROMPT_PATH", "")),
-        conspiracy_prompt_path=_optional_path(get("CONSPIRACY_PROMPT_PATH", "")),
-        roast_prompt_path=_optional_path(get("ROAST_PROMPT_PATH", "")),
-        answer_prompt_path=_optional_path(get("ANSWER_PROMPT_PATH", "")),
+        system_prompt_path=_optional_path(get("SYSTEM_PROMPT_PATH", "prompts/system.txt")),
+        horoscope_prompt_path=_optional_path(get("HOROSCOPE_PROMPT_PATH", "prompts/horoscope.txt")),
+        joke_prompt_path=_optional_path(get("JOKE_PROMPT_PATH", "prompts/joke.txt")),
+        summary_prompt_path=_optional_path(get("SUMMARY_PROMPT_PATH", "prompts/summary.txt")),
+        conspiracy_prompt_path=_optional_path(get("CONSPIRACY_PROMPT_PATH", "prompts/conspiracy.txt")),
+        roast_prompt_path=_optional_path(get("ROAST_PROMPT_PATH", "prompts/roast.txt")),
     )
 
 

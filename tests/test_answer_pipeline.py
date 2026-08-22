@@ -8,7 +8,7 @@ from bot.answer_pipeline import (
     generate_clean_answer,
 )
 from bot.config import GenerationParams
-from bot.handlers import clean_question_text, command_argument, format_roast_target
+from bot.handlers import build_answer_prompt, clean_question_text, command_argument, format_roast_target
 
 
 ANSWER_MODEL = "cognitivecomputations/dolphin-mistral-24b-venice-edition"
@@ -48,6 +48,15 @@ class AnswerPipelineTests(unittest.TestCase):
     def test_question_cleanup_only_removes_bot_mention(self) -> None:
         text = "@my_bot How are you?"
         self.assertEqual(clean_question_text(text, "my_bot"), "How are you?")
+
+    def test_plain_question_is_sent_without_prompt_wrapper(self) -> None:
+        self.assertEqual(build_answer_prompt("How are you?"), "How are you?")
+
+    def test_explicit_chat_context_is_labeled(self) -> None:
+        self.assertEqual(
+            build_answer_prompt("What did we discuss?", "Max: deployment"),
+            "Контекст чата:\nMax: deployment\n\nВопрос:\nWhat did we discuss?",
+        )
 
     def test_command_argument(self) -> None:
         self.assertEqual(command_argument("/roast_now @max"), "@max")

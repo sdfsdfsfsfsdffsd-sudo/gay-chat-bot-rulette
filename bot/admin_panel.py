@@ -12,8 +12,6 @@ from setup_cli import DEFAULTS, QUESTIONS
 SECRET_KEYS = {"TELEGRAM_BOT_TOKEN", "OPENROUTER_API_KEY"}
 PROMPT_TEXT_KEYS = {
     "SYSTEM_PROMPT_TEXT": "Base system prompt text",
-    "ANSWER_SYSTEM_PROMPT_TEXT": "Answer system prompt text",
-    "ANSWER_PROMPT_TEXT": "Answer prompt text",
     "SUMMARY_PROMPT_TEXT": "Summary prompt text",
     "CONSPIRACY_PROMPT_TEXT": "Conspiracy prompt text",
     "HOROSCOPE_PROMPT_TEXT": "Horoscope prompt text",
@@ -90,8 +88,6 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
         "Prompt paths",
         [
             "SYSTEM_PROMPT_PATH",
-            "ANSWER_SYSTEM_PROMPT_PATH",
-            "ANSWER_PROMPT_PATH",
             "SUMMARY_PROMPT_PATH",
             "CONSPIRACY_PROMPT_PATH",
             "HOROSCOPE_PROMPT_PATH",

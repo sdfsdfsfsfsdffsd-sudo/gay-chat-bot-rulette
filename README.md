@@ -60,8 +60,6 @@ not exist:
 
 ```env
 SYSTEM_PROMPT_PATH=prompts/system.txt
-ANSWER_SYSTEM_PROMPT_PATH=prompts/answer_system.txt
-ANSWER_PROMPT_PATH=prompts/answer.txt
 SUMMARY_PROMPT_PATH=prompts/summary.txt
 CONSPIRACY_PROMPT_PATH=prompts/conspiracy.txt
 HOROSCOPE_PROMPT_PATH=prompts/horoscope.txt

@@ -8,8 +8,6 @@ from bot.env_file import read_env
 
 PROMPTS = {
     "system": ("SYSTEM_PROMPT_PATH", "Base system prompt", default_prompts.SYSTEM_BASE),
-    "answer_system": ("ANSWER_SYSTEM_PROMPT_PATH", "Answer system prompt", default_prompts.ANSWER_SYSTEM_PROMPT),
-    "answer": ("ANSWER_PROMPT_PATH", "Answer/search prompt", default_prompts.ANSWER_PROMPT),
     "summary": ("SUMMARY_PROMPT_PATH", "Daily summary prompt", default_prompts.SUMMARY_PROMPT),
     "conspiracy": ("CONSPIRACY_PROMPT_PATH", "Conspiracy prompt", default_prompts.CONSPIRACY_PROMPT),
     "horoscope": ("HOROSCOPE_PROMPT_PATH", "Horoscope prompt", default_prompts.HOROSCOPE_PROMPT),

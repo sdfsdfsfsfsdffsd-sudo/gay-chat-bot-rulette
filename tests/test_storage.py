@@ -64,13 +64,13 @@ class StorageTests(unittest.IsolatedAsyncioTestCase):
             storage = Storage(Path(temp_dir) / "bot.sqlite3")
             await storage.init()
 
-            await storage.set_prompt_override("ANSWER_PROMPT_TEXT", "admin prompt")
+            await storage.set_prompt_override("SUMMARY_PROMPT_TEXT", "admin prompt")
             overrides = await storage.prompt_overrides()
-            await storage.clear_prompt_override("ANSWER_PROMPT_TEXT")
+            await storage.clear_prompt_override("SUMMARY_PROMPT_TEXT")
             cleared = await storage.prompt_overrides()
 
-        self.assertEqual(overrides["ANSWER_PROMPT_TEXT"], "admin prompt")
-        self.assertNotIn("ANSWER_PROMPT_TEXT", cleared)
+        self.assertEqual(overrides["SUMMARY_PROMPT_TEXT"], "admin prompt")
+        self.assertNotIn("SUMMARY_PROMPT_TEXT", cleared)
 
     async def test_setting_overrides_can_be_set_and_cleared(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

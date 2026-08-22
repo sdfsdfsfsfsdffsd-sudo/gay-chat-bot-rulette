@@ -11,7 +11,8 @@ class AdminPanelTests(unittest.TestCase):
         self.assertIn("OPENROUTER_API_KEY", FIELDS)
         self.assertIn("ANSWER_TEMPERATURE", FIELDS)
         self.assertIn("ROAST_PROBABILITY", FIELDS)
-        self.assertIn("ANSWER_PROMPT_TEXT", FIELDS)
+        self.assertNotIn("ANSWER_PROMPT_TEXT", FIELDS)
+        self.assertNotIn("ANSWER_SYSTEM_PROMPT_TEXT", FIELDS)
         self.assertIn("prompt_texts", GROUPS)
 
     def test_masks_secret_values(self) -> None:
@@ -25,7 +26,7 @@ class AdminPanelTests(unittest.TestCase):
         self.assertIn("ANSWER_TEMPERATURE", admin_field_text("ANSWER_TEMPERATURE"))
 
     def test_prompt_text_field_uses_prompt_override_storage(self) -> None:
-        text = admin_field_text("ANSWER_PROMPT_TEXT", {"ANSWER_PROMPT_TEXT": "admin prompt"})
+        text = admin_field_text("SUMMARY_PROMPT_TEXT", {"SUMMARY_PROMPT_TEXT": "admin prompt"})
         self.assertIn("admin prompt", text)
         self.assertIn("admin prompt storage", text)
 

@@ -78,6 +78,12 @@ def clean_question_text(text: str, bot_username: str | None) -> str:
     return cleaned or text.strip()
 
 
+def build_answer_prompt(question: str, context: str | None = None) -> str:
+    if context:
+        return f"Контекст чата:\n{context}\n\nВопрос:\n{question}"
+    return question
+
+
 def command_argument(text: str | None) -> str:
     if not text:
         return ""
@@ -396,7 +402,7 @@ def build_router(
         async with lock:
             processing_message = await message.reply("Ищу ответ на вопрос...")
             try:
-                text = await generate_answer(message, me.username, settings, storage, llm, prompts)
+                text = await generate_answer(message, me.username, settings, storage, llm)
                 try:
                     await message.reply(normalize_telegram_html(text)[:4000], parse_mode="HTML")
                 except Exception:
@@ -417,21 +423,17 @@ def build_router(
         settings: Settings,
         storage: Storage,
         llm: OpenRouterClient,
-        prompts: PromptSet,
     ) -> str:
         question = clean_question_text(message.text or "", bot_username)
-        answer_prefix = prompts.answer.strip()
         if wants_chat_context(message.text):
             context = "\n".join(await storage.recent_messages(message.chat.id, hours=6, limit=80))
-            prompt_parts = [part for part in [answer_prefix, f"Контекст чата:\n{context}", f"Вопрос:\n{question}"] if part]
-            prompt = "\n\n".join(prompt_parts)
+            prompt = build_answer_prompt(question, context)
         else:
-            prompt_parts = [part for part in [answer_prefix, f"Вопрос:\n{question}"] if part]
-            prompt = "\n\n".join(prompt_parts)
+            prompt = build_answer_prompt(question)
         text = await generate_clean_answer(
             llm,
             prompt,
-            system_prompt=prompts.answer_system,
+            system_prompt=None,
             model=settings.answer_model,
             params=settings.answer_params,
         )
