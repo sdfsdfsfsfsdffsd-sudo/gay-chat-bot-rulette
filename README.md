@@ -147,7 +147,7 @@ professional help. Roast mode is playful only.
 Configure a comma-separated scope of tracked words:
 
 ```env
-TRACKED_WORDS=СВО,пенис,CP
+TRACKED_WORDS=
 WORD_STATS_TIME=23:35
 ```
 
