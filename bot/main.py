@@ -1,0 +1,65 @@
+from __future__ import annotations
+
+import asyncio
+import logging
+
+from aiogram import Bot, Dispatcher
+
+from bot.config import apply_settings, effective_model_settings, load_settings
+from bot.handlers import build_router
+from bot.llm import OpenRouterClient
+from bot.prompt_loader import load_prompts
+from bot.scheduler import build_scheduler, configure_scheduler
+from bot.storage import Storage
+
+
+async def main() -> None:
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
+    settings = load_settings(require_secrets=False)
+    storage = Storage(settings.database_path)
+    await storage.init()
+    setting_overrides = await storage.settings_overrides()
+    apply_settings(settings, load_settings(setting_overrides))
+    await seed_missing_model_settings(storage, settings, setting_overrides)
+    apply_settings(settings, load_settings(await storage.settings_overrides()))
+    prompts = load_prompts(settings, await storage.prompt_overrides())
+
+    bot = Bot(settings.telegram_bot_token)
+    llm = OpenRouterClient(settings)
+    dispatcher = Dispatcher()
+    scheduler = build_scheduler(bot, settings, storage, llm, prompts)
+
+    def reload_scheduler() -> None:
+        configure_scheduler(scheduler, bot, settings, storage, llm, prompts)
+
+    dispatcher.include_router(
+        build_router(
+            settings,
+            storage,
+            llm,
+            prompts,
+            reload_scheduler=reload_scheduler,
+        )
+    )
+
+    scheduler.start()
+    logging.info("Bot started. Bound chat: %s", settings.bot_chat_id)
+    try:
+        await dispatcher.start_polling(bot)
+    finally:
+        scheduler.shutdown(wait=False)
+        await llm.close()
+        await bot.session.close()
+
+
+def run() -> None:
+    asyncio.run(main())
+
+
+async def seed_missing_model_settings(storage: Storage, settings, setting_overrides: dict[str, str]) -> None:
+    for key, value in effective_model_settings(settings).items():
+        if key not in setting_overrides:
+            await storage.set_setting_override(key, value)
