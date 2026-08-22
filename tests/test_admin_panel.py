@@ -12,7 +12,8 @@ class AdminPanelTests(unittest.TestCase):
         self.assertIn("ANSWER_TEMPERATURE", FIELDS)
         self.assertIn("ROAST_PROBABILITY", FIELDS)
         self.assertNotIn("ANSWER_PROMPT_TEXT", FIELDS)
-        self.assertNotIn("ANSWER_SYSTEM_PROMPT_TEXT", FIELDS)
+        self.assertIn("ANSWER_SYSTEM_PROMPT_TEXT", FIELDS)
+        self.assertIn("CONSPIRACY_SYSTEM_PROMPT_TEXT", FIELDS)
         self.assertIn("prompt_texts", GROUPS)
 
     def test_masks_secret_values(self) -> None:
@@ -29,6 +30,12 @@ class AdminPanelTests(unittest.TestCase):
         text = admin_field_text("SUMMARY_PROMPT_TEXT", {"SUMMARY_PROMPT_TEXT": "admin prompt"})
         self.assertIn("admin prompt", text)
         self.assertIn("admin prompt storage", text)
+
+    def test_answer_system_prompt_shows_effective_default(self) -> None:
+        text = admin_field_text("ANSWER_SYSTEM_PROMPT_TEXT", {})
+
+        self.assertIn("Uncensored", text)
+        self.assertIn("prompt file/default", text)
 
     def test_setting_field_prefers_admin_setting_storage(self) -> None:
         text = admin_field_text("ANSWER_TEMPERATURE", setting_overrides={"ANSWER_TEMPERATURE": "1.05"})

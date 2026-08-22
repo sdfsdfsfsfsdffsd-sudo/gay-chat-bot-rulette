@@ -2,21 +2,42 @@ from __future__ import annotations
 
 import html
 from dataclasses import dataclass
+from pathlib import Path
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
+from bot import prompts as default_prompts
 from bot.env_file import read_env
 from setup_cli import DEFAULTS, QUESTIONS
 
 
 SECRET_KEYS = {"TELEGRAM_BOT_TOKEN", "OPENROUTER_API_KEY"}
 PROMPT_TEXT_KEYS = {
-    "SYSTEM_PROMPT_TEXT": "Base system prompt text",
+    "ANSWER_SYSTEM_PROMPT_TEXT": "Answer system prompt",
+    "SUMMARY_SYSTEM_PROMPT_TEXT": "Summary system prompt",
+    "CONSPIRACY_SYSTEM_PROMPT_TEXT": "Conspiracy system prompt",
+    "HOROSCOPE_SYSTEM_PROMPT_TEXT": "Horoscope system prompt",
+    "JOKE_SYSTEM_PROMPT_TEXT": "Joke system prompt",
+    "ROAST_SYSTEM_PROMPT_TEXT": "Roast system prompt",
     "SUMMARY_PROMPT_TEXT": "Summary prompt text",
     "CONSPIRACY_PROMPT_TEXT": "Conspiracy prompt text",
     "HOROSCOPE_PROMPT_TEXT": "Horoscope prompt text",
     "JOKE_PROMPT_TEXT": "Joke prompt text",
     "ROAST_PROMPT_TEXT": "Roast prompt text",
+}
+
+PROMPT_FALLBACKS = {
+    "ANSWER_SYSTEM_PROMPT_TEXT": (None, default_prompts.ANSWER_SYSTEM_PROMPT),
+    "SUMMARY_SYSTEM_PROMPT_TEXT": ("SYSTEM_PROMPT_PATH", default_prompts.SYSTEM_BASE),
+    "CONSPIRACY_SYSTEM_PROMPT_TEXT": ("SYSTEM_PROMPT_PATH", default_prompts.SYSTEM_BASE),
+    "HOROSCOPE_SYSTEM_PROMPT_TEXT": (None, ""),
+    "JOKE_SYSTEM_PROMPT_TEXT": (None, ""),
+    "ROAST_SYSTEM_PROMPT_TEXT": (None, ""),
+    "SUMMARY_PROMPT_TEXT": ("SUMMARY_PROMPT_PATH", default_prompts.SUMMARY_PROMPT),
+    "CONSPIRACY_PROMPT_TEXT": ("CONSPIRACY_PROMPT_PATH", default_prompts.CONSPIRACY_PROMPT),
+    "HOROSCOPE_PROMPT_TEXT": ("HOROSCOPE_PROMPT_PATH", default_prompts.HOROSCOPE_PROMPT),
+    "JOKE_PROMPT_TEXT": ("JOKE_PROMPT_PATH", default_prompts.JOKE_PROMPT),
+    "ROAST_PROMPT_TEXT": ("ROAST_PROMPT_PATH", default_prompts.ROAST_PROMPT),
 }
 
 
@@ -186,8 +207,15 @@ def admin_field_text(
     env = read_env()
     field = FIELDS[key]
     if key in PROMPT_TEXT_KEYS:
-        value = (prompt_overrides or {}).get(key, "")
-        source = "admin prompt storage"
+        if key in (prompt_overrides or {}):
+            value = (prompt_overrides or {})[key]
+            source = "admin prompt storage"
+        else:
+            path_key, fallback = PROMPT_FALLBACKS[key]
+            path_value = env.get(path_key, DEFAULTS.get(path_key, "")) if path_key else ""
+            path = Path(path_value) if path_value else None
+            value = path.read_text(encoding="utf-8").strip() if path and path.exists() else fallback.strip()
+            source = "prompt file/default"
     elif key in (setting_overrides or {}):
         value = (setting_overrides or {})[key]
         source = "admin settings storage"

@@ -70,6 +70,12 @@ ROAST_PROMPT_PATH=prompts/roast.txt
 The Telegram admin panel can also write direct prompt overrides into the bot database.
 Prompt priority is: admin prompt override, then prompt file path from effective settings, then built-in default.
 
+System prompts are configured independently per service in `/admin`:
+`ANSWER_SYSTEM_PROMPT_TEXT`, `SUMMARY_SYSTEM_PROMPT_TEXT`,
+`CONSPIRACY_SYSTEM_PROMPT_TEXT`, `HOROSCOPE_SYSTEM_PROMPT_TEXT`,
+`JOKE_SYSTEM_PROMPT_TEXT`, and `ROAST_SYSTEM_PROMPT_TEXT`. They are stored in
+SQLite and applied immediately without changing `.env` or restarting the bot.
+
 Temperatures are also configurable:
 
 ```env

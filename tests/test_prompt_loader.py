@@ -22,6 +22,11 @@ def settings_stub(**overrides):
 
 
 class PromptLoaderTests(unittest.TestCase):
+    def test_answer_has_uncensored_system_prompt_by_default(self) -> None:
+        prompts = load_prompts(settings_stub())
+
+        self.assertIn("You are Uncensored", prompts.answer_system)
+
     def test_loads_system_prompt_from_configured_file(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             path = Path(temp_dir) / "system.txt"
@@ -30,7 +35,8 @@ class PromptLoaderTests(unittest.TestCase):
 
             prompts = load_prompts(settings)
 
-        self.assertEqual(prompts.system_base, "custom system")
+        self.assertEqual(prompts.summary_system, "custom system")
+        self.assertEqual(prompts.conspiracy_system, "custom system")
 
     def test_empty_prompt_file_overrides_default(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -51,6 +57,19 @@ class PromptLoaderTests(unittest.TestCase):
             prompts = load_prompts(settings, {"SUMMARY_PROMPT_TEXT": "admin prompt"})
 
         self.assertEqual(prompts.summary, "admin prompt")
+
+    def test_service_system_prompts_are_independent(self) -> None:
+        prompts = load_prompts(
+            settings_stub(),
+            {
+                "ANSWER_SYSTEM_PROMPT_TEXT": "answer system",
+                "CONSPIRACY_SYSTEM_PROMPT_TEXT": "conspiracy system",
+            },
+        )
+
+        self.assertEqual(prompts.answer_system, "answer system")
+        self.assertEqual(prompts.conspiracy_system, "conspiracy system")
+        self.assertNotEqual(prompts.summary_system, "conspiracy system")
 
 
 if __name__ == "__main__":

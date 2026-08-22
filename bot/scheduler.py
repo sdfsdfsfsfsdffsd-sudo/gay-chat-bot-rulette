@@ -48,6 +48,7 @@ async def send_horoscope(bot: Bot, settings: Settings, storage: Storage, llm: Op
     context = "\n".join(await storage.recent_messages(settings.bot_chat_id, hours=168, limit=700))
     text = await llm.generate_with_params(
         f"{prompts.horoscope}\n\n{_participants_block(participants)}\n\nКонтекст чата за последнее время:\n{context}",
+        system_prompt=prompts.horoscope_system,
         model=settings.horoscope_model,
         params=settings.horoscope_params,
         max_tokens=1400,
@@ -65,8 +66,8 @@ async def send_summary(bot: Bot, settings: Settings, storage: Storage, llm: Open
     participants = await storage.recent_participants(settings.bot_chat_id, hours=24)
     prompt = f"{_participants_block(participants)}\n\nСообщения за день:\n" + "\n".join(lines[-500:])
     text = await llm.generate_with_params(
-        prompt,
-        system_prompt=f"{prompts.system_base}\n{prompts.summary}",
+        f"{prompts.summary}\n\n{prompt}",
+        system_prompt=prompts.summary_system,
         model=settings.summary_model,
         params=settings.summary_params,
         max_tokens=1600,
@@ -77,6 +78,7 @@ async def send_summary(bot: Bot, settings: Settings, storage: Storage, llm: Open
 async def send_joke(bot: Bot, settings: Settings, llm: OpenRouterClient, prompts: PromptSet) -> None:
     text = await llm.generate_with_params(
         prompts.joke,
+        system_prompt=prompts.joke_system,
         model=settings.joke_model,
         params=settings.joke_params,
         max_tokens=500,
@@ -117,6 +119,7 @@ async def maybe_send_roast(bot: Bot, settings: Settings, storage: Storage, llm: 
     )
     text = await llm.generate_with_params(
         prompt,
+        system_prompt=prompts.roast_system,
         model=settings.roast_model,
         params=settings.roast_params,
         max_tokens=550,
@@ -132,7 +135,7 @@ async def send_conspiracy(bot: Bot, settings: Settings, storage: Storage, llm: O
     prompt = f"{_participants_block(participants)}\n\n{prompts.conspiracy}\n\nКонтекст:\n" + "\n".join(lines[-700:])
     text = await llm.generate_with_params(
         prompt,
-        system_prompt=f"{prompts.system_base}\n{prompts.conspiracy}",
+        system_prompt=prompts.conspiracy_system,
         model=settings.conspiracy_model,
         params=settings.conspiracy_params,
         max_tokens=900,

@@ -278,8 +278,8 @@ def build_router(
         participants = await storage.recent_participants(message.chat.id, hours=24)
         prompt = f"{participants_block(participants)}\n\nСообщения за день:\n" + "\n".join(lines[-500:])
         text = await llm.generate_with_params(
-            prompt,
-            system_prompt=f"{prompts.system_base}\n{prompts.summary}",
+            f"{prompts.summary}\n\n{prompt}",
+            system_prompt=prompts.summary_system,
             model=settings.summary_model,
             params=settings.summary_params,
             max_tokens=1600,
@@ -297,6 +297,7 @@ def build_router(
         context = "\n".join(await storage.recent_messages(message.chat.id, hours=168, limit=700))
         text = await llm.generate_with_params(
             f"{prompts.horoscope}\n\n{participants_block(participants)}\n\nКонтекст чата за последнее время:\n{context}",
+            system_prompt=prompts.horoscope_system,
             model=settings.horoscope_model,
             params=settings.horoscope_params,
             max_tokens=1400,
@@ -319,7 +320,7 @@ def build_router(
         )
         text = await llm.generate_with_params(
             prompt,
-            system_prompt=f"{prompts.system_base}\n{prompts.conspiracy}",
+            system_prompt=prompts.conspiracy_system,
             model=settings.conspiracy_model,
             params=settings.conspiracy_params,
             max_tokens=900,
@@ -351,6 +352,7 @@ def build_router(
         prompt = await build_roast_prompt(storage, message.chat.id, prompts, target)
         text = await llm.generate_with_params(
             prompt,
+            system_prompt=prompts.roast_system,
             model=settings.roast_model,
             params=settings.roast_params,
             max_tokens=550,
@@ -433,7 +435,7 @@ def build_router(
         text = await generate_clean_answer(
             llm,
             prompt,
-            system_prompt=None,
+            system_prompt=prompts.answer_system,
             model=settings.answer_model,
             params=settings.answer_params,
         )
