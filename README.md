@@ -45,12 +45,43 @@ ANSWER_MODEL=cognitivecomputations/dolphin-mistral-24b-venice-edition
 SUMMARY_MODEL=deepseek/deepseek-chat
 CONSPIRACY_MODEL=deepseek/deepseek-chat
 HOROSCOPE_MODEL=
-JOKE_MODEL=openai/gpt-4.1-nano
+JOKE_MODEL=cognitivecomputations/dolphin-mistral-24b-venice-edition
 ROAST_MODEL=cognitivecomputations/dolphin-mistral-24b-venice-edition
 ```
 
 Per-feature model ids are shown in `/admin` and can be changed without restart.
 Empty `HOROSCOPE_MODEL` means the bot uses `SUMMARY_MODEL`.
+Empty `JOKE_MODEL` falls back to the uncensored default model.
+
+## Schedule And Context
+
+Schedules can be changed from `/admin` without restarting the bot. For the
+`*_EVERY_DAYS` values, `0` disables automatic posts, `1` means every day, and
+larger values mean once per that many days at the configured time.
+
+```env
+HOROSCOPE_TIME=09:30
+HOROSCOPE_EVERY_DAYS=1
+DAILY_SUMMARY_TIME=23:30
+SUMMARY_EVERY_DAYS=1
+JOKE_TIME=18:00
+JOKE_EVERY_DAYS=1
+CONSPIRACY_TIME=20:00
+CONSPIRACY_EVERY_DAYS=3
+ALABUGA_EVERY_HOURS=4
+```
+
+Context windows are independent from posting frequency:
+
+```env
+SUMMARY_CONTEXT_HOURS=24
+HOROSCOPE_CONTEXT_DAYS=7
+CONSPIRACY_CONTEXT_DAYS=3
+ROAST_CONTEXT_DAYS=3
+```
+
+`ROAST_CONTEXT_DAYS` applies both to the selected participant's messages and
+to the surrounding group-chat context.
 
 ## Prompts
 
@@ -164,6 +195,10 @@ receive them.
 - `/bind_chat` - prints the current chat id for `.env`.
 - `/summary_now` - generates a summary immediately.
 - `/horoscope_now` - generates a horoscope immediately.
+- `/joke_now` - generates a joke immediately.
+- `/conspiracy_now` - generates a conspiracy post immediately.
+- `/roast_now @username` or `/bully @username` - generates a roast immediately.
+- `/alabuga_now` or `/alabuga_random` - sends a random Alabuga Polytech post.
 - `/word_stats_now` - prints daily tracked-word stats immediately.
 
 ## Safety Boundaries

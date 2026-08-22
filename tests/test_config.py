@@ -73,6 +73,46 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(settings.summary_model, "deepseek/deepseek-chat")
         self.assertEqual(settings.horoscope_model, "deepseek/deepseek-chat")
 
+    def test_joke_model_falls_back_to_uncensored_default_model(self) -> None:
+        env = {
+            "TELEGRAM_BOT_TOKEN": "token",
+            "OPENROUTER_API_KEY": "key",
+            "OPENROUTER_DEFAULT_MODEL": "cognitivecomputations/dolphin-mistral-24b-venice-edition",
+            "JOKE_MODEL": "",
+        }
+        with patch.dict(os.environ, env, clear=True), patch("bot.config.load_dotenv"):
+            settings = load_settings()
+
+        self.assertEqual(
+            settings.joke_model,
+            "cognitivecomputations/dolphin-mistral-24b-venice-edition",
+        )
+
+    def test_schedule_and_context_settings_can_be_overridden(self) -> None:
+        overrides = {
+            "TELEGRAM_BOT_TOKEN": "token",
+            "OPENROUTER_API_KEY": "key",
+            "SUMMARY_EVERY_DAYS": "2",
+            "JOKE_EVERY_DAYS": "3",
+            "CONSPIRACY_TIME": "21:15",
+            "ALABUGA_EVERY_HOURS": "12",
+            "SUMMARY_CONTEXT_HOURS": "36",
+            "HOROSCOPE_CONTEXT_DAYS": "5",
+            "CONSPIRACY_CONTEXT_DAYS": "4",
+            "ROAST_CONTEXT_DAYS": "3",
+        }
+        with patch.dict(os.environ, {}, clear=True), patch("bot.config.load_dotenv"):
+            settings = load_settings(overrides)
+
+        self.assertEqual(settings.summary_every_days, 2)
+        self.assertEqual(settings.joke_every_days, 3)
+        self.assertEqual(settings.conspiracy_time, "21:15")
+        self.assertEqual(settings.alabuga_every_hours, 12)
+        self.assertEqual(settings.summary_context_hours, 36)
+        self.assertEqual(settings.horoscope_context_days, 5)
+        self.assertEqual(settings.conspiracy_context_days, 4)
+        self.assertEqual(settings.roast_context_days, 3)
+
     def test_effective_model_settings_returns_admin_keys(self) -> None:
         env = {
             "TELEGRAM_BOT_TOKEN": "token",

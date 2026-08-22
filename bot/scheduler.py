@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import random
+from datetime import datetime, timedelta
+
 from aiogram import Bot
 from aiogram.types import FSInputFile
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
@@ -26,6 +28,20 @@ def _hour_min(value: str) -> tuple[int, int]:
     return int(hour), int(minute)
 
 
+def periodic_day_trigger(every_days: int, time_value: str, tz: ZoneInfo, *, now: datetime | None = None):
+    if every_days <= 0:
+        return None
+    hour, minute = _hour_min(time_value)
+    if every_days == 1:
+        return CronTrigger(hour=hour, minute=minute, timezone=tz)
+
+    current = now.astimezone(tz) if now else datetime.now(tz)
+    first_run = current.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    if first_run <= current:
+        first_run += timedelta(days=1)
+    return IntervalTrigger(days=every_days, start_date=first_run, timezone=tz)
+
+
 async def _send_text(bot: Bot, chat_id: int | None, text: str, *, parse_mode: str | None = None) -> None:
     if chat_id is None:
         return
@@ -44,8 +60,9 @@ def _participants_block(participants: list[str]) -> str:
 async def send_horoscope(bot: Bot, settings: Settings, storage: Storage, llm: OpenRouterClient, prompts: PromptSet) -> None:
     if settings.bot_chat_id is None:
         return
-    participants = await storage.recent_participants(settings.bot_chat_id, hours=24)
-    context = "\n".join(await storage.recent_messages(settings.bot_chat_id, hours=168, limit=700))
+    context_hours = settings.horoscope_context_days * 24
+    participants = await storage.recent_participants(settings.bot_chat_id, hours=context_hours)
+    context = "\n".join(await storage.recent_messages(settings.bot_chat_id, hours=context_hours, limit=700))
     text = await llm.generate_with_params(
         f"{prompts.horoscope}\n\n{_participants_block(participants)}\n\nКонтекст чата за последнее время:\n{context}",
         system_prompt=prompts.horoscope_system,
@@ -59,11 +76,11 @@ async def send_horoscope(bot: Bot, settings: Settings, storage: Storage, llm: Op
 async def send_summary(bot: Bot, settings: Settings, storage: Storage, llm: OpenRouterClient, prompts: PromptSet) -> None:
     if settings.bot_chat_id is None:
         return
-    lines = await storage.recent_messages(settings.bot_chat_id, hours=24)
+    lines = await storage.recent_messages(settings.bot_chat_id, hours=settings.summary_context_hours)
     if not lines:
         await _send_text(bot, settings.bot_chat_id, "<b>SVOдка за день</b>\n\n🫥 Сегодня чат мастерски изображал тишину.", parse_mode="HTML")
         return
-    participants = await storage.recent_participants(settings.bot_chat_id, hours=24)
+    participants = await storage.recent_participants(settings.bot_chat_id, hours=settings.summary_context_hours)
     prompt = f"{_participants_block(participants)}\n\nСообщения за день:\n" + "\n".join(lines[-500:])
     text = await llm.generate_with_params(
         f"{prompts.summary}\n\n{prompt}",
@@ -76,6 +93,8 @@ async def send_summary(bot: Bot, settings: Settings, storage: Storage, llm: Open
 
 
 async def send_joke(bot: Bot, settings: Settings, llm: OpenRouterClient, prompts: PromptSet) -> None:
+    if settings.bot_chat_id is None:
+        return
     text = await llm.generate_with_params(
         prompts.joke,
         system_prompt=prompts.joke_system,
@@ -104,8 +123,9 @@ async def maybe_send_roast(bot: Bot, settings: Settings, storage: Storage, llm: 
     if random.random() > settings.roast_probability:
         return
     target = f"@{settings.target_username}"
-    target_messages = await storage.recent_messages_by_participant(settings.bot_chat_id, target, hours=168, limit=80)
-    general_context = await storage.recent_messages(settings.bot_chat_id, hours=24, limit=120)
+    context_hours = settings.roast_context_days * 24
+    target_messages = await storage.recent_messages_by_participant(settings.bot_chat_id, target, hours=context_hours, limit=80)
+    general_context = await storage.recent_messages(settings.bot_chat_id, hours=context_hours, limit=120)
     target_block = "\n".join(target_messages) if target_messages else "Сообщений именно этого участника за период не найдено."
     general_block = "\n".join(general_context[-120:]) if general_context else "Общий контекст пуст."
     prompt = (
@@ -114,7 +134,7 @@ async def maybe_send_roast(bot: Bot, settings: Settings, storage: Storage, llm: 
         + target
         + "\n\nСообщения цели за последнее время:\n"
         + target_block
-        + "\n\nОбщий контекст чата за сутки:\n"
+        + f"\n\nОбщий контекст чата за {settings.roast_context_days} дн.:\n"
         + general_block
     )
     text = await llm.generate_with_params(
@@ -130,8 +150,9 @@ async def maybe_send_roast(bot: Bot, settings: Settings, storage: Storage, llm: 
 async def send_conspiracy(bot: Bot, settings: Settings, storage: Storage, llm: OpenRouterClient, prompts: PromptSet) -> None:
     if settings.bot_chat_id is None:
         return
-    lines = await storage.recent_messages(settings.bot_chat_id, hours=72, limit=700)
-    participants = await storage.recent_participants(settings.bot_chat_id, hours=72)
+    context_hours = settings.conspiracy_context_days * 24
+    lines = await storage.recent_messages(settings.bot_chat_id, hours=context_hours, limit=700)
+    participants = await storage.recent_participants(settings.bot_chat_id, hours=context_hours)
     prompt = f"{_participants_block(participants)}\n\n{prompts.conspiracy}\n\nКонтекст:\n" + "\n".join(lines[-700:])
     text = await llm.generate_with_params(
         prompt,
@@ -170,19 +191,26 @@ def configure_scheduler(
 ) -> None:
     scheduler.remove_all_jobs()
     tz = ZoneInfo(settings.timezone)
-    horoscope_hour, horoscope_minute = _hour_min(settings.horoscope_time)
-    summary_hour, summary_minute = _hour_min(settings.daily_summary_time)
     word_stats_hour, word_stats_minute = _hour_min(settings.word_stats_time)
-    joke_hour, joke_minute = _hour_min(settings.joke_time)
 
-    scheduler.add_job(send_horoscope, CronTrigger(hour=horoscope_hour, minute=horoscope_minute, timezone=tz), args=[bot, settings, storage, llm, prompts])
-    scheduler.add_job(send_summary, CronTrigger(hour=summary_hour, minute=summary_minute, timezone=tz), args=[bot, settings, storage, llm, prompts])
-    scheduler.add_job(send_word_stats, CronTrigger(hour=word_stats_hour, minute=word_stats_minute, timezone=tz), args=[bot, settings, storage])
-    scheduler.add_job(send_joke, CronTrigger(hour=joke_hour, minute=joke_minute, timezone=tz), args=[bot, settings, llm, prompts])
-    scheduler.add_job(maybe_send_random_image, IntervalTrigger(minutes=settings.random_image_every_minutes, timezone=tz), args=[bot, settings])
-    scheduler.add_job(maybe_send_roast, IntervalTrigger(minutes=settings.roast_every_minutes, timezone=tz), args=[bot, settings, storage, llm, prompts])
-    scheduler.add_job(send_conspiracy, IntervalTrigger(days=settings.conspiracy_every_days, timezone=tz), args=[bot, settings, storage, llm, prompts])
-    scheduler.add_job(send_alabuga_news, IntervalTrigger(hours=4, timezone=tz), args=[bot, settings, storage])
+    day_jobs = (
+        ("horoscope", send_horoscope, settings.horoscope_every_days, settings.horoscope_time, [bot, settings, storage, llm, prompts]),
+        ("summary", send_summary, settings.summary_every_days, settings.daily_summary_time, [bot, settings, storage, llm, prompts]),
+        ("joke", send_joke, settings.joke_every_days, settings.joke_time, [bot, settings, llm, prompts]),
+        ("conspiracy", send_conspiracy, settings.conspiracy_every_days, settings.conspiracy_time, [bot, settings, storage, llm, prompts]),
+    )
+    for job_id, function, every_days, time_value, args in day_jobs:
+        trigger = periodic_day_trigger(every_days, time_value, tz)
+        if trigger is not None:
+            scheduler.add_job(function, trigger, args=args, id=job_id)
+
+    scheduler.add_job(send_word_stats, CronTrigger(hour=word_stats_hour, minute=word_stats_minute, timezone=tz), args=[bot, settings, storage], id="word_stats")
+    if settings.random_image_every_minutes > 0:
+        scheduler.add_job(maybe_send_random_image, IntervalTrigger(minutes=settings.random_image_every_minutes, timezone=tz), args=[bot, settings], id="random_image")
+    if settings.roast_every_minutes > 0:
+        scheduler.add_job(maybe_send_roast, IntervalTrigger(minutes=settings.roast_every_minutes, timezone=tz), args=[bot, settings, storage, llm, prompts], id="roast")
+    if settings.alabuga_every_hours > 0:
+        scheduler.add_job(send_alabuga_news, IntervalTrigger(hours=settings.alabuga_every_hours, timezone=tz), args=[bot, settings, storage], id="alabuga")
 
 
 def build_scheduler(bot: Bot, settings: Settings, storage: Storage, llm: OpenRouterClient, prompts: PromptSet) -> AsyncIOScheduler:

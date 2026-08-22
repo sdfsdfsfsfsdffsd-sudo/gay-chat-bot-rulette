@@ -14,7 +14,11 @@ class AdminPanelTests(unittest.TestCase):
         self.assertNotIn("ANSWER_PROMPT_TEXT", FIELDS)
         self.assertIn("ANSWER_SYSTEM_PROMPT_TEXT", FIELDS)
         self.assertIn("CONSPIRACY_SYSTEM_PROMPT_TEXT", FIELDS)
+        self.assertIn("JOKE_EVERY_DAYS", FIELDS)
+        self.assertIn("CONSPIRACY_CONTEXT_DAYS", FIELDS)
+        self.assertIn("ROAST_CONTEXT_DAYS", FIELDS)
         self.assertIn("prompt_texts", GROUPS)
+        self.assertIn("JOKE_EVERY_DAYS", GROUPS["schedule"][1])
 
     def test_masks_secret_values(self) -> None:
         self.assertEqual(display_value("OPENROUTER_API_KEY", "sk-1234567890"), "sk-1...7890")

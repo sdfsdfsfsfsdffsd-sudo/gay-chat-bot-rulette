@@ -69,9 +69,18 @@ class Settings:
     alabuga_channel_url: str
     alabuga_jobs_url: str | None
     horoscope_time: str
+    horoscope_every_days: int
     daily_summary_time: str
+    summary_every_days: int
     word_stats_time: str
     joke_time: str
+    joke_every_days: int
+    conspiracy_time: str
+    alabuga_every_hours: int
+    summary_context_hours: int
+    horoscope_context_days: int
+    conspiracy_context_days: int
+    roast_context_days: int
     tracked_words: list[str]
     random_image_every_minutes: int
     random_image_probability: float
@@ -190,7 +199,7 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
     summary_model = _model_value(get("SUMMARY_MODEL", ""), quality_model)
     conspiracy_model = _model_value(get("CONSPIRACY_MODEL", ""), quality_model)
     horoscope_model = _model_value(get("HOROSCOPE_MODEL", ""), summary_model)
-    joke_model = _model_value(get("JOKE_MODEL", ""), cheap_model)
+    joke_model = _model_value(get("JOKE_MODEL", ""), default_model)
     roast_model = _model_value(get("ROAST_MODEL", ""), default_model)
 
     return Settings(
@@ -215,9 +224,18 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         alabuga_channel_url=get("ALABUGA_CHANNEL_URL", "https://t.me/s/alabugapolytech"),
         alabuga_jobs_url=(get("ALABUGA_JOBS_URL", "") or "").strip() or None,
         horoscope_time=get("HOROSCOPE_TIME", "09:30"),
+        horoscope_every_days=int(get("HOROSCOPE_EVERY_DAYS", "1")),
         daily_summary_time=get("DAILY_SUMMARY_TIME", "23:30"),
+        summary_every_days=int(get("SUMMARY_EVERY_DAYS", "1")),
         word_stats_time=get("WORD_STATS_TIME", get("DAILY_SUMMARY_TIME", "23:30")),
         joke_time=get("JOKE_TIME", "18:00"),
+        joke_every_days=int(get("JOKE_EVERY_DAYS", "1")),
+        conspiracy_time=get("CONSPIRACY_TIME", "20:00"),
+        alabuga_every_hours=int(get("ALABUGA_EVERY_HOURS", "4")),
+        summary_context_hours=int(get("SUMMARY_CONTEXT_HOURS", "24")),
+        horoscope_context_days=int(get("HOROSCOPE_CONTEXT_DAYS", "7")),
+        conspiracy_context_days=int(get("CONSPIRACY_CONTEXT_DAYS", "3")),
+        roast_context_days=int(get("ROAST_CONTEXT_DAYS", "3")),
         tracked_words=_csv(get("TRACKED_WORDS", "")),
         random_image_every_minutes=int(get("RANDOM_IMAGE_EVERY_MINUTES", "180")),
         random_image_probability=float(get("RANDOM_IMAGE_PROBABILITY", "0.35")),

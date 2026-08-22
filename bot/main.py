@@ -12,6 +12,9 @@ from bot.prompt_loader import load_prompts
 from bot.scheduler import build_scheduler, configure_scheduler
 from bot.storage import Storage
 
+SETTINGS_SCHEMA_VERSION_KEY = "__SETTINGS_SCHEMA_VERSION"
+LEGACY_JOKE_MODEL = "openai/gpt-4.1-nano"
+
 
 async def main() -> None:
     logging.basicConfig(
@@ -21,6 +24,8 @@ async def main() -> None:
     settings = load_settings(require_secrets=False)
     storage = Storage(settings.database_path)
     await storage.init()
+    setting_overrides = await storage.settings_overrides()
+    await migrate_runtime_settings(storage, settings, setting_overrides)
     setting_overrides = await storage.settings_overrides()
     apply_settings(settings, load_settings(setting_overrides))
     await seed_missing_model_settings(storage, settings, setting_overrides)
@@ -63,3 +68,18 @@ async def seed_missing_model_settings(storage: Storage, settings, setting_overri
     for key, value in effective_model_settings(settings).items():
         if key not in setting_overrides:
             await storage.set_setting_override(key, value)
+
+
+async def migrate_runtime_settings(storage: Storage, bootstrap_settings, setting_overrides: dict[str, str]) -> None:
+    try:
+        schema_version = int(setting_overrides.get(SETTINGS_SCHEMA_VERSION_KEY, "0"))
+    except ValueError:
+        schema_version = 0
+
+    if schema_version < 1:
+        if (
+            setting_overrides.get("JOKE_MODEL") == LEGACY_JOKE_MODEL
+            and bootstrap_settings.joke_model != LEGACY_JOKE_MODEL
+        ):
+            await storage.set_setting_override("JOKE_MODEL", bootstrap_settings.joke_model)
+        await storage.set_setting_override(SETTINGS_SCHEMA_VERSION_KEY, "1")

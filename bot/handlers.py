@@ -45,11 +45,13 @@ COMMANDS_TEXT = """<b>Команды бота</b>
 /bind_chat — привязать текущий чат для scheduler
 /summary_now — сразу сделать SVOдку за день
 /horoscope_now — сразу сделать персональный гороскоп
+/joke_now — сразу сгенерировать анекдот
 /conspiracy_now — сразу сделать бредовую теорию заговора по контексту
 /roast_now [@user|random] — playful roast участника
 /bully [@user|random] — алиас для /roast_now
 /word_stats_now — показать дневную статистику по отслеживаемым словам
 /alabuga_random — кинуть случайный пост из канала Алабуга Политех
+/alabuga_now — алиас для /alabuga_random
 """
 
 
@@ -102,9 +104,16 @@ def format_roast_target(value: str) -> str:
     return value
 
 
-async def build_roast_prompt(storage: Storage, chat_id: int, prompts: PromptSet, target: str) -> str:
-    target_messages = await storage.recent_messages_by_participant(chat_id, target, hours=168, limit=80)
-    general_context = await storage.recent_messages(chat_id, hours=24, limit=120)
+async def build_roast_prompt(
+    storage: Storage,
+    chat_id: int,
+    prompts: PromptSet,
+    target: str,
+    context_days: int,
+) -> str:
+    context_hours = context_days * 24
+    target_messages = await storage.recent_messages_by_participant(chat_id, target, hours=context_hours, limit=80)
+    general_context = await storage.recent_messages(chat_id, hours=context_hours, limit=120)
     target_block = "\n".join(target_messages) if target_messages else "Сообщений именно этого участника за период не найдено."
     general_block = "\n".join(general_context[-120:]) if general_context else "Общий контекст пуст."
     return (
@@ -113,7 +122,7 @@ async def build_roast_prompt(storage: Storage, chat_id: int, prompts: PromptSet,
         + target
         + "\n\nСообщения цели за последнее время:\n"
         + target_block
-        + "\n\nОбщий контекст чата за сутки:\n"
+        + f"\n\nОбщий контекст чата за {context_days} дн.:\n"
         + general_block
     )
 
@@ -271,11 +280,11 @@ def build_router(
     async def summary_now(message: Message) -> None:
         if not is_admin(message):
             return
-        lines = await storage.recent_messages(message.chat.id, hours=24)
+        lines = await storage.recent_messages(message.chat.id, hours=settings.summary_context_hours)
         if not lines:
             await message.answer("За сутки пока пусто.")
             return
-        participants = await storage.recent_participants(message.chat.id, hours=24)
+        participants = await storage.recent_participants(message.chat.id, hours=settings.summary_context_hours)
         prompt = f"{participants_block(participants)}\n\nСообщения за день:\n" + "\n".join(lines[-500:])
         text = await llm.generate_with_params(
             f"{prompts.summary}\n\n{prompt}",
@@ -293,8 +302,9 @@ def build_router(
     async def horoscope_now(message: Message) -> None:
         if not is_admin(message):
             return
-        participants = await storage.recent_participants(message.chat.id, hours=24)
-        context = "\n".join(await storage.recent_messages(message.chat.id, hours=168, limit=700))
+        context_hours = settings.horoscope_context_days * 24
+        participants = await storage.recent_participants(message.chat.id, hours=context_hours)
+        context = "\n".join(await storage.recent_messages(message.chat.id, hours=context_hours, limit=700))
         text = await llm.generate_with_params(
             f"{prompts.horoscope}\n\n{participants_block(participants)}\n\nКонтекст чата за последнее время:\n{context}",
             system_prompt=prompts.horoscope_system,
@@ -307,12 +317,29 @@ def build_router(
         except Exception:
             await message.answer(text[:4000])
 
+    @router.message(Command("joke_now"))
+    async def joke_now(message: Message) -> None:
+        if not is_admin(message):
+            return
+        text = await llm.generate_with_params(
+            prompts.joke,
+            system_prompt=prompts.joke_system,
+            model=settings.joke_model,
+            params=settings.joke_params,
+            max_tokens=500,
+        )
+        try:
+            await message.answer(normalize_telegram_html(text)[:4000], parse_mode="HTML")
+        except Exception:
+            await message.answer(text[:4000])
+
     @router.message(Command("conspiracy_now"))
     async def conspiracy_now(message: Message) -> None:
         if not is_admin(message):
             return
-        lines = await storage.recent_messages(message.chat.id, hours=72, limit=700)
-        participants = await storage.recent_participants(message.chat.id, hours=72)
+        context_hours = settings.conspiracy_context_days * 24
+        lines = await storage.recent_messages(message.chat.id, hours=context_hours, limit=700)
+        participants = await storage.recent_participants(message.chat.id, hours=context_hours)
         prompt = (
             f"{participants_block(participants)}\n\n"
             f"{prompts.conspiracy}\n\n"
@@ -349,7 +376,7 @@ def build_router(
             await message.answer("Некого roast-ить: укажи `/roast_now @username` или напиши в чат пару сообщений.", parse_mode="Markdown")
             return
 
-        prompt = await build_roast_prompt(storage, message.chat.id, prompts, target)
+        prompt = await build_roast_prompt(storage, message.chat.id, prompts, target, settings.roast_context_days)
         text = await llm.generate_with_params(
             prompt,
             system_prompt=prompts.roast_system,
@@ -366,7 +393,7 @@ def build_router(
         text = await build_daily_word_stats(storage, message.chat.id, settings.tracked_words)
         await message.answer(text[:4000])
 
-    @router.message(Command("alabuga_random"))
+    @router.message(Command("alabuga_random", "alabuga_now"))
     async def alabuga_random(message: Message) -> None:
         if not is_admin(message):
             return
