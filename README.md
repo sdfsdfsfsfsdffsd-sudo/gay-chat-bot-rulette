@@ -122,13 +122,14 @@ At minimum, add these service variables in Railway:
 TELEGRAM_BOT_TOKEN=<fresh BotFather token>
 OPENROUTER_API_KEY=<OpenRouter key>
 ADMIN_USER_IDS=<comma-separated Telegram user ids>
-DATABASE_PATH=/app/data/bot.sqlite3
-LOCAL_IMAGE_DIR=/app/data/images
 ```
 
 Attach a Railway Volume at `/app/data`. Without it the bot can start, but the
 SQLite database, admin-panel overrides, message history, and uploaded local
-images are lost when Railway replaces the deployment.
+images are lost when Railway replaces the deployment. Railway provides the
+mount location as `RAILWAY_VOLUME_MOUNT_PATH`; the bot automatically stores the
+database at `<mount>/bot.sqlite3` and images at `<mount>/images`. Explicit
+`DATABASE_PATH` and `LOCAL_IMAGE_DIR` values still take priority when set.
 
 If Railway still reports `No start command detected`, check the deployment's
 commit SHA and source branch. A deployment containing `railway.json` uses the

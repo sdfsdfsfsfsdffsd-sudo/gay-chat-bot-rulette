@@ -117,6 +117,23 @@ def _model_value(value: str | None, fallback: str) -> str:
     return value.strip() if value and value.strip() else fallback
 
 
+def _storage_path(
+    get: Callable[[str, str], str],
+    key: str,
+    local_default: str,
+    volume_child: str,
+) -> Path:
+    configured = get(key, "").strip()
+    if configured:
+        return Path(configured)
+
+    railway_volume = get("RAILWAY_VOLUME_MOUNT_PATH", "").strip()
+    if railway_volume:
+        return Path(railway_volume) / volume_child
+
+    return Path(local_default)
+
+
 def _optional_float(value: str | None) -> float | None:
     if value is None or not value.strip():
         return None
@@ -160,9 +177,13 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
     token = get("TELEGRAM_BOT_TOKEN", "").strip()
     openrouter_key = get("OPENROUTER_API_KEY", "").strip()
     if require_secrets and not token:
-        raise RuntimeError("TELEGRAM_BOT_TOKEN is missing. Run: python setup_cli.py")
+        raise RuntimeError(
+            "TELEGRAM_BOT_TOKEN is missing. Configure it in .env or Railway service Variables."
+        )
     if require_secrets and not openrouter_key:
-        raise RuntimeError("OPENROUTER_API_KEY is missing. Run: python setup_cli.py")
+        raise RuntimeError(
+            "OPENROUTER_API_KEY is missing. Configure it in .env or Railway service Variables."
+        )
 
     default_model = get("OPENROUTER_DEFAULT_MODEL", "cognitivecomputations/dolphin-mistral-24b-venice-edition")
     quality_model = get("OPENROUTER_QUALITY_MODEL", "deepseek/deepseek-chat")
@@ -190,8 +211,8 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         admin_user_ids=_ints(get("ADMIN_USER_IDS", "")),
         target_username=(get("TARGET_USERNAME", "") or "").strip().lstrip("@") or None,
         timezone=get("TIMEZONE", "Europe/Warsaw"),
-        database_path=Path(get("DATABASE_PATH", "data/bot.sqlite3")),
-        local_image_dir=Path(get("LOCAL_IMAGE_DIR", "data/images")),
+        database_path=_storage_path(get, "DATABASE_PATH", "data/bot.sqlite3", "bot.sqlite3"),
+        local_image_dir=_storage_path(get, "LOCAL_IMAGE_DIR", "data/images", "images"),
         image_source_channels=_csv(get("IMAGE_SOURCE_CHANNELS", "")),
         alabuga_channel_url=get("ALABUGA_CHANNEL_URL", "https://t.me/s/alabugapolytech"),
         alabuga_jobs_url=(get("ALABUGA_JOBS_URL", "") or "").strip() or None,

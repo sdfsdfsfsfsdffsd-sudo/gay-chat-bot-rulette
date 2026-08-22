@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import unittest
+from pathlib import Path
 from unittest.mock import patch
 
 from bot.config import effective_model_settings, load_settings
@@ -32,6 +33,32 @@ class ConfigTests(unittest.TestCase):
 
         self.assertEqual(settings.telegram_bot_token, "")
         self.assertEqual(settings.openrouter_api_key, "")
+
+    def test_railway_volume_is_used_for_default_storage_paths(self) -> None:
+        env = {
+            "TELEGRAM_BOT_TOKEN": "token",
+            "OPENROUTER_API_KEY": "key",
+            "RAILWAY_VOLUME_MOUNT_PATH": "/app/data",
+        }
+        with patch.dict(os.environ, env, clear=True), patch("bot.config.load_dotenv"):
+            settings = load_settings()
+
+        self.assertEqual(settings.database_path, Path("/app/data/bot.sqlite3"))
+        self.assertEqual(settings.local_image_dir, Path("/app/data/images"))
+
+    def test_explicit_storage_paths_override_railway_volume(self) -> None:
+        env = {
+            "TELEGRAM_BOT_TOKEN": "token",
+            "OPENROUTER_API_KEY": "key",
+            "RAILWAY_VOLUME_MOUNT_PATH": "/app/data",
+            "DATABASE_PATH": "/custom/db.sqlite3",
+            "LOCAL_IMAGE_DIR": "/custom/images",
+        }
+        with patch.dict(os.environ, env, clear=True), patch("bot.config.load_dotenv"):
+            settings = load_settings()
+
+        self.assertEqual(settings.database_path, Path("/custom/db.sqlite3"))
+        self.assertEqual(settings.local_image_dir, Path("/custom/images"))
 
     def test_horoscope_model_falls_back_to_summary_model(self) -> None:
         env = {
