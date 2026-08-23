@@ -5,6 +5,7 @@ import getpass
 import os
 
 from telethon import TelegramClient
+from telethon.errors import ApiIdInvalidError
 from telethon.sessions import StringSession
 
 
@@ -32,10 +33,19 @@ async def main() -> None:
     api_hash = os.getenv("TELEGRAM_USER_API_HASH", "").strip() or ask_required("Telegram API hash: ", secret=True)
     phone = ask_required("Phone number, international format: ")
 
-    async with TelegramClient(StringSession(), api_id, api_hash) as client:
+    client = TelegramClient(StringSession(), api_id, api_hash)
+    try:
         await client.start(phone=phone)
         print("\nTELEGRAM_USER_SESSION:")
         print(client.session.save())
+    except ApiIdInvalidError:
+        print(
+            "\nInvalid api_id/api_hash pair. Use API credentials from "
+            "https://my.telegram.org/apps, not the Telegram bot token."
+        )
+        raise
+    finally:
+        await client.disconnect()
 
 
 if __name__ == "__main__":
