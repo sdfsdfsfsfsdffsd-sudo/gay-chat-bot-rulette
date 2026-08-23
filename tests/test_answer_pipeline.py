@@ -66,8 +66,8 @@ class AnswerPipelineTests(unittest.TestCase):
         )
 
     def test_command_argument(self) -> None:
-        self.assertEqual(command_argument("/roast_now @max"), "@max")
-        self.assertEqual(command_argument("/roast_now"), "")
+        self.assertEqual(command_argument("/bully @max"), "@max")
+        self.assertEqual(command_argument("/bully"), "")
 
     def test_format_roast_target(self) -> None:
         self.assertEqual(format_roast_target("@max"), "@max")

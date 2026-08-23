@@ -7,6 +7,7 @@ from pathlib import Path
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot import prompts as default_prompts
+from bot.bully import DEFAULT_BULLY_MESSAGE_TEXT
 from bot.env_file import read_env
 from setup_cli import DEFAULTS, QUESTIONS
 
@@ -23,6 +24,8 @@ PROMPT_TEXT_KEYS = {
     "CONSPIRACY_PROMPT_TEXT": "Заговоры · Основной промпт",
     "HOROSCOPE_PROMPT_TEXT": "Гороскоп · Основной промпт",
     "JOKE_PROMPT_TEXT": "Анекдоты · Основной промпт",
+    "JOKE_A_PROMPT_TEXT": "Joke A · Основной промпт",
+    "JOKE_B_PROMPT_TEXT": "Joke B · Основной промпт",
     "ROAST_PROMPT_TEXT": "Roast · Основной промпт",
 }
 
@@ -32,6 +35,7 @@ FIELD_LABELS = {
     "BOT_CHAT_ID": "Привязанный чат (Chat ID)",
     "ADMIN_USER_IDS": "Администраторы (Telegram ID через запятую)",
     "TARGET_USERNAME": "Участник для автоматического roast",
+    "BULLY_TARGET_USERNAME": "Bully · цель по умолчанию",
     "TIMEZONE": "Часовой пояс",
     "OPENROUTER_DEFAULT_MODEL": "Модель по умолчанию",
     "OPENROUTER_QUALITY_MODEL": "Качественная модель",
@@ -42,6 +46,13 @@ FIELD_LABELS = {
     "LOCAL_IMAGE_DIR": "Каталог локальных изображений",
     "DATABASE_PATH": "Путь к SQLite",
     "TRACKED_WORDS": "Отслеживаемые слова",
+    "JOKE_A_TIME": "Joke A · время отправки",
+    "JOKE_A_EVERY_DAYS": "Joke A · интервал в днях",
+    "JOKE_B_TIME": "Joke B · время отправки",
+    "JOKE_B_EVERY_DAYS": "Joke B · интервал в днях",
+    "JOKE_A_PROMPT_PATH": "Joke A · файл промпта",
+    "JOKE_B_PROMPT_PATH": "Joke B · файл промпта",
+    "BULLY_MESSAGE_TEXT": "Bully · статичный текст",
 }
 
 SERVICE_LABELS = {
@@ -82,6 +93,8 @@ PROMPT_FALLBACKS = {
     "CONSPIRACY_PROMPT_TEXT": ("CONSPIRACY_PROMPT_PATH", default_prompts.CONSPIRACY_PROMPT),
     "HOROSCOPE_PROMPT_TEXT": ("HOROSCOPE_PROMPT_PATH", default_prompts.HOROSCOPE_PROMPT),
     "JOKE_PROMPT_TEXT": ("JOKE_PROMPT_PATH", default_prompts.JOKE_PROMPT),
+    "JOKE_A_PROMPT_TEXT": ("JOKE_A_PROMPT_PATH", default_prompts.JOKE_PROMPT),
+    "JOKE_B_PROMPT_TEXT": ("JOKE_B_PROMPT_PATH", default_prompts.JOKE_B_PROMPT),
     "ROAST_PROMPT_TEXT": ("ROAST_PROMPT_PATH", default_prompts.ROAST_PROMPT),
 }
 
@@ -102,6 +115,7 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
             "BOT_CHAT_ID",
             "ADMIN_USER_IDS",
             "TARGET_USERNAME",
+            "BULLY_TARGET_USERNAME",
             "TIMEZONE",
         ],
     ),
@@ -139,6 +153,10 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
             "WORD_STATS_TIME",
             "JOKE_TIME",
             "JOKE_EVERY_DAYS",
+            "JOKE_A_TIME",
+            "JOKE_A_EVERY_DAYS",
+            "JOKE_B_TIME",
+            "JOKE_B_EVERY_DAYS",
             "CONSPIRACY_TIME",
             "CONSPIRACY_EVERY_DAYS",
             "ALABUGA_EVERY_HOURS",
@@ -150,6 +168,7 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
             "RANDOM_IMAGE_PROBABILITY",
             "ROAST_EVERY_MINUTES",
             "ROAST_PROBABILITY",
+            "BULLY_MESSAGE_TEXT",
             "TRACKED_WORDS",
         ],
     ),
@@ -167,6 +186,8 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
             "CONSPIRACY_PROMPT_PATH",
             "HOROSCOPE_PROMPT_PATH",
             "JOKE_PROMPT_PATH",
+            "JOKE_A_PROMPT_PATH",
+            "JOKE_B_PROMPT_PATH",
             "ROAST_PROMPT_PATH",
         ],
     ),
@@ -288,7 +309,7 @@ def admin_field_text(
         value = (setting_overrides or {})[key]
         source = "admin settings storage"
     else:
-        value = env.get(key, DEFAULTS.get(key, ""))
+        value = env.get(key, DEFAULTS.get(key, DEFAULT_BULLY_MESSAGE_TEXT if key == "BULLY_MESSAGE_TEXT" else ""))
         source = ".env/default"
     return (
         f"<b>⚙️ {html.escape(field.label)}</b>\n"

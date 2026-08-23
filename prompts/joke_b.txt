@@ -1,0 +1,3 @@
+Invent a second-kind truck-driver joke for a Telegram group chat.
+Make it different from the default joke style: more absurd, short, dirty-minded, and punchy.
+Use Telegram-safe HTML only if formatting is needed. Do not include real instructions for harm, threats, doxing, or targeted harassment.

@@ -27,13 +27,11 @@ COMMANDS = (
     CommandDefinition("bind_chat", "Привязать текущий чат"),
     CommandDefinition("summary_now", "Сделать сводку сейчас"),
     CommandDefinition("horoscope_now", "Сделать гороскоп сейчас"),
-    CommandDefinition("joke_now", "Сгенерировать анекдот сейчас"),
+    CommandDefinition("joke_now", "Анекдот сейчас: a, b или random"),
     CommandDefinition("conspiracy_now", "Создать теорию заговора сейчас"),
-    CommandDefinition("roast_now", "Сделать roast участника"),
-    CommandDefinition("bully", "Алиас команды roast"),
+    CommandDefinition("bully", "Отправить bully-шаблон участнику"),
     CommandDefinition("word_stats_now", "Показать статистику слов"),
     CommandDefinition("alabuga_random", "Случайный пост Алабуга Политех"),
-    CommandDefinition("alabuga_now", "Отправить пост Алабуга Политех"),
 )
 
 

@@ -32,6 +32,12 @@ JOKE_PROMPT = """
 Без ненависти к защищенным группам, без призывов к насилию и без реальных инструкций вреда.
 """
 
+JOKE_B_PROMPT = """
+Invent a second-kind truck-driver joke for a Telegram group chat.
+Make it different from the default joke style: more absurd, short, dirty-minded, and punchy.
+Use Telegram-safe HTML only if formatting is needed. Do not include real instructions for harm, threats, doxing, or targeted harassment.
+"""
+
 SUMMARY_PROMPT = """
 Сделай дневную SVOдку Telegram-чата по сообщениям.
 

@@ -93,7 +93,10 @@ class ConfigTests(unittest.TestCase):
             "TELEGRAM_BOT_TOKEN": "token",
             "OPENROUTER_API_KEY": "key",
             "SUMMARY_EVERY_DAYS": "2",
-            "JOKE_EVERY_DAYS": "3",
+            "JOKE_A_EVERY_DAYS": "3",
+            "JOKE_B_EVERY_DAYS": "0.5",
+            "JOKE_A_TIME": "12:30",
+            "JOKE_B_TIME": "19:45",
             "CONSPIRACY_TIME": "21:15",
             "ALABUGA_EVERY_HOURS": "12",
             "SUMMARY_CONTEXT_HOURS": "36",
@@ -105,7 +108,10 @@ class ConfigTests(unittest.TestCase):
             settings = load_settings(overrides)
 
         self.assertEqual(settings.summary_every_days, 2)
-        self.assertEqual(settings.joke_every_days, 3)
+        self.assertEqual(settings.joke_a_every_days, 3)
+        self.assertEqual(settings.joke_b_every_days, 0.5)
+        self.assertEqual(settings.joke_a_time, "12:30")
+        self.assertEqual(settings.joke_b_time, "19:45")
         self.assertEqual(settings.conspiracy_time, "21:15")
         self.assertEqual(settings.alabuga_every_hours, 12)
         self.assertEqual(settings.summary_context_hours, 36)
@@ -143,6 +149,8 @@ class ConfigTests(unittest.TestCase):
 
     def test_admin_setting_validation_accepts_half_day_and_rejects_bad_time(self) -> None:
         validate_setting_override("JOKE_EVERY_DAYS", "0.5")
+        validate_setting_override("JOKE_A_EVERY_DAYS", "0.5")
+        validate_setting_override("JOKE_B_TIME", "18:30")
         with self.assertRaises(ValueError):
             validate_setting_override("JOKE_TIME", "25:00")
 

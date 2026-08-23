@@ -8,6 +8,8 @@ from typing import Callable
 
 from dotenv import load_dotenv
 
+from bot.bully import DEFAULT_BULLY_MESSAGE_TEXT
+
 MODEL_SETTING_FIELDS = {
     "ANSWER_MODEL": "answer_model",
     "SUMMARY_MODEL": "summary_model",
@@ -21,6 +23,8 @@ DECIMAL_DAY_SETTING_KEYS = {
     "HOROSCOPE_EVERY_DAYS",
     "SUMMARY_EVERY_DAYS",
     "JOKE_EVERY_DAYS",
+    "JOKE_A_EVERY_DAYS",
+    "JOKE_B_EVERY_DAYS",
     "CONSPIRACY_EVERY_DAYS",
 }
 NONNEGATIVE_INTEGER_SETTING_KEYS = {
@@ -39,6 +43,8 @@ TIME_SETTING_KEYS = {
     "DAILY_SUMMARY_TIME",
     "WORD_STATS_TIME",
     "JOKE_TIME",
+    "JOKE_A_TIME",
+    "JOKE_B_TIME",
     "CONSPIRACY_TIME",
 }
 
@@ -88,6 +94,7 @@ class Settings:
     bot_chat_id: int | None
     admin_user_ids: set[int]
     target_username: str | None
+    bully_target_username: str | None
     timezone: str
     database_path: Path
     local_image_dir: Path
@@ -101,6 +108,10 @@ class Settings:
     word_stats_time: str
     joke_time: str
     joke_every_days: float
+    joke_a_time: str
+    joke_a_every_days: float
+    joke_b_time: str
+    joke_b_every_days: float
     conspiracy_time: str
     alabuga_every_hours: int
     summary_context_hours: int
@@ -112,6 +123,7 @@ class Settings:
     random_image_probability: float
     roast_every_minutes: int
     roast_probability: float
+    bully_message_text: str
     conspiracy_every_days: float
     answer_params: GenerationParams
     summary_params: GenerationParams
@@ -122,6 +134,8 @@ class Settings:
     system_prompt_path: Path | None
     horoscope_prompt_path: Path | None
     joke_prompt_path: Path | None
+    joke_a_prompt_path: Path | None
+    joke_b_prompt_path: Path | None
     summary_prompt_path: Path | None
     conspiracy_prompt_path: Path | None
     roast_prompt_path: Path | None
@@ -297,6 +311,7 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         bot_chat_id=_optional_int(get("BOT_CHAT_ID", "")),
         admin_user_ids=_ints(get("ADMIN_USER_IDS", "")),
         target_username=(get("TARGET_USERNAME", "") or "").strip().lstrip("@") or None,
+        bully_target_username=(get("BULLY_TARGET_USERNAME", get("TARGET_USERNAME", "")) or "").strip().lstrip("@") or None,
         timezone=get("TIMEZONE", "Europe/Warsaw"),
         database_path=_storage_path(get, "DATABASE_PATH", "data/bot.sqlite3", "bot.sqlite3"),
         local_image_dir=_storage_path(get, "LOCAL_IMAGE_DIR", "data/images", "images"),
@@ -310,6 +325,10 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         word_stats_time=_time_value(get("WORD_STATS_TIME", get("DAILY_SUMMARY_TIME", "23:30")), "23:30"),
         joke_time=_time_value(get("JOKE_TIME", "18:00"), "18:00"),
         joke_every_days=_float_value(get("JOKE_EVERY_DAYS", "1"), 1.0),
+        joke_a_time=_time_value(get("JOKE_A_TIME", get("JOKE_TIME", "12:00")), "12:00"),
+        joke_a_every_days=_float_value(get("JOKE_A_EVERY_DAYS", get("JOKE_EVERY_DAYS", "1")), 1.0),
+        joke_b_time=_time_value(get("JOKE_B_TIME", "18:00"), "18:00"),
+        joke_b_every_days=_float_value(get("JOKE_B_EVERY_DAYS", get("JOKE_EVERY_DAYS", "1")), 1.0),
         conspiracy_time=_time_value(get("CONSPIRACY_TIME", "20:00"), "20:00"),
         alabuga_every_hours=_int_value(get("ALABUGA_EVERY_HOURS", "4"), 4),
         summary_context_hours=_int_value(get("SUMMARY_CONTEXT_HOURS", "24"), 24),
@@ -321,6 +340,7 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         random_image_probability=_float_value(get("RANDOM_IMAGE_PROBABILITY", "0.35"), 0.35),
         roast_every_minutes=_int_value(get("ROAST_EVERY_MINUTES", "240"), 240),
         roast_probability=_float_value(get("ROAST_PROBABILITY", "0.25"), 0.25),
+        bully_message_text=get("BULLY_MESSAGE_TEXT", DEFAULT_BULLY_MESSAGE_TEXT).strip(),
         conspiracy_every_days=_float_value(get("CONSPIRACY_EVERY_DAYS", "3"), 3.0),
         answer_params=_generation_params("ANSWER", 0.7, get, 1800),
         summary_params=_generation_params("SUMMARY", 0.5, get),
@@ -340,6 +360,8 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         system_prompt_path=_optional_path(get("SYSTEM_PROMPT_PATH", "prompts/system.txt")),
         horoscope_prompt_path=_optional_path(get("HOROSCOPE_PROMPT_PATH", "prompts/horoscope.txt")),
         joke_prompt_path=_optional_path(get("JOKE_PROMPT_PATH", "prompts/joke.txt")),
+        joke_a_prompt_path=_optional_path(get("JOKE_A_PROMPT_PATH", get("JOKE_PROMPT_PATH", "prompts/joke.txt"))),
+        joke_b_prompt_path=_optional_path(get("JOKE_B_PROMPT_PATH", "prompts/joke_b.txt")),
         summary_prompt_path=_optional_path(get("SUMMARY_PROMPT_PATH", "prompts/summary.txt")),
         conspiracy_prompt_path=_optional_path(get("CONSPIRACY_PROMPT_PATH", "prompts/conspiracy.txt")),
         roast_prompt_path=_optional_path(get("ROAST_PROMPT_PATH", "prompts/roast.txt")),

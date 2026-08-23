@@ -10,6 +10,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 from zoneinfo import ZoneInfo
 
+from bot.bully import render_bully_message
 from bot.config import Settings
 from bot.llm import OpenRouterClient
 from bot.prompt_loader import PromptSet
@@ -50,6 +51,18 @@ async def _send_text(bot: Bot, chat_id: int | None, text: str, *, parse_mode: st
         await bot.send_message(chat_id, text[:4000], parse_mode=parse_mode)
     except Exception:
         await bot.send_message(chat_id, text[:4000])
+
+
+async def _forward_or_send_feed_item(bot: Bot, chat_id: int | None, item) -> None:
+    if chat_id is None:
+        return
+    if item.channel_username and item.message_id:
+        try:
+            await bot.forward_message(chat_id, f"@{item.channel_username}", item.message_id)
+            return
+        except Exception:
+            pass
+    await _send_text(bot, chat_id, f"Alabuga Polytech:\n\n{item.text}\n\n{item.url}")
 
 
 def _participants_block(participants: list[str]) -> str:
@@ -101,12 +114,14 @@ async def send_joke(
     storage: Storage,
     llm: OpenRouterClient,
     prompts: PromptSet,
+    joke_type: str = "a",
 ) -> None:
     await sync_runtime_config(settings, prompts, storage)
     if settings.bot_chat_id is None:
         return
+    prompt = prompts.joke_b if joke_type.lower() == "b" else prompts.joke_a
     text = await llm.generate_with_params(
-        prompts.joke,
+        prompt,
         system_prompt=prompts.joke_system,
         model=settings.joke_model,
         params=settings.joke_params,
@@ -129,32 +144,13 @@ async def maybe_send_random_image(bot: Bot, settings: Settings) -> None:
 
 async def maybe_send_roast(bot: Bot, settings: Settings, storage: Storage, llm: OpenRouterClient, prompts: PromptSet) -> None:
     await sync_runtime_config(settings, prompts, storage)
-    if settings.bot_chat_id is None or not settings.target_username:
+    target_username = settings.bully_target_username or settings.target_username
+    if settings.bot_chat_id is None or not target_username:
         return
     if random.random() > settings.roast_probability:
         return
-    target = f"@{settings.target_username}"
-    context_hours = settings.roast_context_days * 24
-    target_messages = await storage.recent_messages_by_participant(settings.bot_chat_id, target, hours=context_hours, limit=80)
-    general_context = await storage.recent_messages(settings.bot_chat_id, hours=context_hours, limit=120)
-    target_block = "\n".join(target_messages) if target_messages else "Сообщений именно этого участника за период не найдено."
-    general_block = "\n".join(general_context[-120:]) if general_context else "Общий контекст пуст."
-    prompt = (
-        prompts.roast.format(target=target, username=settings.target_username)
-        + "\n\nЦель roast:\n"
-        + target
-        + "\n\nСообщения цели за последнее время:\n"
-        + target_block
-        + f"\n\nОбщий контекст чата за {settings.roast_context_days} дн.:\n"
-        + general_block
-    )
-    text = await llm.generate_with_params(
-        prompt,
-        system_prompt=prompts.roast_system,
-        model=settings.roast_model,
-        params=settings.roast_params,
-        max_tokens=550,
-    )
+    target = f"@{target_username}"
+    text = render_bully_message(settings.bully_message_text, target)
     await _send_text(bot, settings.bot_chat_id, normalize_telegram_html(text), parse_mode="HTML")
 
 
@@ -182,7 +178,7 @@ async def send_alabuga_news(bot: Bot, settings: Settings, storage: Storage) -> N
     item = await fetch_latest_unsent_telegram_item(settings.alabuga_channel_url, storage.was_sent)
     if not item:
         return
-    await _send_text(bot, settings.bot_chat_id, f"Алабуга Политех:\n\n{item.text}\n\n{item.url}")
+    await _forward_or_send_feed_item(bot, settings.bot_chat_id, item)
     await storage.mark_sent(item.key)
 
 
@@ -208,7 +204,8 @@ def configure_scheduler(
     day_jobs = (
         ("horoscope", send_horoscope, settings.horoscope_every_days, settings.horoscope_time, [bot, settings, storage, llm, prompts]),
         ("summary", send_summary, settings.summary_every_days, settings.daily_summary_time, [bot, settings, storage, llm, prompts]),
-        ("joke", send_joke, settings.joke_every_days, settings.joke_time, [bot, settings, storage, llm, prompts]),
+        ("joke_a", send_joke, settings.joke_a_every_days, settings.joke_a_time, [bot, settings, storage, llm, prompts, "a"]),
+        ("joke_b", send_joke, settings.joke_b_every_days, settings.joke_b_time, [bot, settings, storage, llm, prompts, "b"]),
         ("conspiracy", send_conspiracy, settings.conspiracy_every_days, settings.conspiracy_time, [bot, settings, storage, llm, prompts]),
     )
     for job_id, function, every_days, time_value, args in day_jobs:

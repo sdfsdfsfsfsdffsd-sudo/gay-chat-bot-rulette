@@ -65,8 +65,10 @@ HOROSCOPE_TIME=09:30
 HOROSCOPE_EVERY_DAYS=1
 DAILY_SUMMARY_TIME=23:30
 SUMMARY_EVERY_DAYS=1
-JOKE_TIME=18:00
-JOKE_EVERY_DAYS=1
+JOKE_A_TIME=12:00
+JOKE_A_EVERY_DAYS=1
+JOKE_B_TIME=18:00
+JOKE_B_EVERY_DAYS=1
 CONSPIRACY_TIME=20:00
 CONSPIRACY_EVERY_DAYS=3
 ALABUGA_EVERY_HOURS=4
@@ -96,17 +98,26 @@ SUMMARY_PROMPT_PATH=prompts/summary.txt
 CONSPIRACY_PROMPT_PATH=prompts/conspiracy.txt
 HOROSCOPE_PROMPT_PATH=prompts/horoscope.txt
 JOKE_PROMPT_PATH=prompts/joke.txt
+JOKE_A_PROMPT_PATH=prompts/joke.txt
+JOKE_B_PROMPT_PATH=prompts/joke_b.txt
 ROAST_PROMPT_PATH=prompts/roast.txt
 ```
 
 The Telegram admin panel can also write direct prompt overrides into the bot database.
 Prompt priority is: admin prompt override, then prompt file path from effective settings, then built-in default.
+Jokes have two independent main prompt overrides: `JOKE_A_PROMPT_TEXT` and
+`JOKE_B_PROMPT_TEXT`. The older `JOKE_PROMPT_TEXT` is still accepted as a
+fallback for type A.
 
 System prompts are configured independently per service in `/admin`:
 `ANSWER_SYSTEM_PROMPT_TEXT`, `SUMMARY_SYSTEM_PROMPT_TEXT`,
 `CONSPIRACY_SYSTEM_PROMPT_TEXT`, `HOROSCOPE_SYSTEM_PROMPT_TEXT`,
 `JOKE_SYSTEM_PROMPT_TEXT`, and `ROAST_SYSTEM_PROMPT_TEXT`. They are stored in
 SQLite and applied immediately without changing `.env` or restarting the bot.
+
+`/bully` does not call the LLM. It uses `BULLY_MESSAGE_TEXT` from `/admin`
+or `.env`; the template supports `{target}` and `{username}`. The default
+target is `BULLY_TARGET_USERNAME`, falling back to the older `TARGET_USERNAME`.
 
 Temperatures are also configurable:
 
@@ -202,10 +213,10 @@ receive the full menu in their private chat and in the bound group.
 - `/runtime_config` - shows effective models and system-prompt hashes from runtime.
 - `/summary_now` - generates a summary immediately.
 - `/horoscope_now` - generates a horoscope immediately.
-- `/joke_now` - generates a joke immediately.
+- `/joke_now`, `/joke_now a`, `/joke_now b` - generates a joke immediately.
 - `/conspiracy_now` - generates a conspiracy post immediately.
-- `/roast_now @username` or `/bully @username` - generates a roast immediately.
-- `/alabuga_now` or `/alabuga_random` - sends a random Alabuga Polytech post.
+- `/bully @username` - sends the static bully template.
+- `/alabuga_random` - forwards a random Alabuga Polytech post when Telegram allows it.
 - `/word_stats_now` - prints daily tracked-word stats immediately.
 
 ## Safety Boundaries

@@ -13,6 +13,8 @@ def settings_stub(**overrides):
         "system_prompt_path": None,
         "horoscope_prompt_path": None,
         "joke_prompt_path": None,
+        "joke_a_prompt_path": None,
+        "joke_b_prompt_path": None,
         "summary_prompt_path": None,
         "conspiracy_prompt_path": None,
         "roast_prompt_path": None,
@@ -62,6 +64,19 @@ class PromptLoaderTests(unittest.TestCase):
             prompts = load_prompts(settings, {"SUMMARY_PROMPT_TEXT": "admin prompt"})
 
         self.assertEqual(prompts.summary, "admin prompt")
+
+    def test_joke_prompts_can_be_overridden_independently(self) -> None:
+        prompts = load_prompts(
+            settings_stub(),
+            {
+                "JOKE_A_PROMPT_TEXT": "type a",
+                "JOKE_B_PROMPT_TEXT": "type b",
+            },
+        )
+
+        self.assertEqual(prompts.joke, "type a")
+        self.assertEqual(prompts.joke_a, "type a")
+        self.assertEqual(prompts.joke_b, "type b")
 
     def test_service_system_prompts_are_independent(self) -> None:
         prompts = load_prompts(

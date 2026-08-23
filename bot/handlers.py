@@ -23,6 +23,7 @@ from bot.admin_panel import (
     PROMPT_TEXT_KEYS,
 )
 from bot.answer_pipeline import AnswerExtractionError, generate_clean_answer
+from bot.bully import render_bully_message
 from bot.config import Settings, validate_setting_override
 from bot.commands import commands_text
 from bot.llm import OpenRouterClient
@@ -351,8 +352,11 @@ def build_router(
         if not is_admin(message):
             return
         await sync_runtime_config(settings, prompts, storage)
+        requested_type = command_argument(message.text).lower()
+        joke_type = requested_type if requested_type in {"a", "b"} else random.choice(("a", "b"))
+        joke_prompt = prompts.joke_b if joke_type == "b" else prompts.joke_a
         text = await llm.generate_with_params(
-            prompts.joke,
+            joke_prompt,
             system_prompt=prompts.joke_system,
             model=settings.joke_model,
             params=settings.joke_params,
@@ -388,8 +392,8 @@ def build_router(
         except Exception:
             await message.answer(text[:4000])
 
-    @router.message(Command("roast_now", "bully"))
-    async def roast_now(message: Message) -> None:
+    @router.message(Command("bully"))
+    async def bully_now(message: Message) -> None:
         if not is_admin(message):
             return
         await sync_runtime_config(settings, prompts, storage)
@@ -399,23 +403,16 @@ def build_router(
             target = random.choice(participants) if participants else ""
         elif arg:
             target = format_roast_target(arg)
-        elif settings.target_username:
-            target = format_roast_target(settings.target_username)
+        elif settings.bully_target_username or settings.target_username:
+            target = format_roast_target(settings.bully_target_username or settings.target_username or "")
         else:
             target = random.choice(participants) if participants else ""
 
         if not target:
-            await message.answer("Некого roast-ить: укажи `/roast_now @username` или напиши в чат пару сообщений.", parse_mode="Markdown")
+            await message.answer("Некого bully-ить: укажи `/bully @username`, задай BULLY_TARGET_USERNAME в админке или напиши в чат пару сообщений.", parse_mode="Markdown")
             return
 
-        prompt = await build_roast_prompt(storage, message.chat.id, prompts, target, settings.roast_context_days)
-        text = await llm.generate_with_params(
-            prompt,
-            system_prompt=prompts.roast_system,
-            model=settings.roast_model,
-            params=settings.roast_params,
-            max_tokens=550,
-        )
+        text = render_bully_message(settings.bully_message_text, target)
         await message.answer(normalize_telegram_html(text)[:4000], parse_mode="HTML")
 
     @router.message(Command("word_stats_now"))
@@ -425,15 +422,22 @@ def build_router(
         text = await build_daily_word_stats(storage, message.chat.id, settings.tracked_words)
         await message.answer(text[:4000])
 
-    @router.message(Command("alabuga_random", "alabuga_now"))
-    async def alabuga_random(message: Message) -> None:
+    @router.message(Command("alabuga_random"))
+    async def alabuga_random(message: Message, bot: Bot) -> None:
         if not is_admin(message):
             return
         item = await fetch_random_telegram_item(settings.alabuga_channel_url, limit=30)
         if not item:
             await message.answer("Не смог найти посты в канале Алабуга Политех.")
             return
-        await message.answer(f"Алабуга Политех:\n\n{item.text[:3400]}\n\n{item.url}")
+        if item.channel_username and item.message_id:
+            try:
+                await bot.forward_message(message.chat.id, f"@{item.channel_username}", item.message_id)
+                return
+            except Exception:
+                pass
+        await message.answer(f"Alabuga Polytech:\n\n{item.text[:3400]}\n\n{item.url}")
+
 
     @router.message()
     async def collect_and_answer(message: Message, bot: Bot) -> None:

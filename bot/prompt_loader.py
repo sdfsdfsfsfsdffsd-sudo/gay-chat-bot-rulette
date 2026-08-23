@@ -15,6 +15,8 @@ PROMPT_OVERRIDE_KEYS = {
     "ROAST_SYSTEM_PROMPT_TEXT": "roast_system",
     "HOROSCOPE_PROMPT_TEXT": "horoscope",
     "JOKE_PROMPT_TEXT": "joke",
+    "JOKE_A_PROMPT_TEXT": "joke_a",
+    "JOKE_B_PROMPT_TEXT": "joke_b",
     "SUMMARY_PROMPT_TEXT": "summary",
     "CONSPIRACY_PROMPT_TEXT": "conspiracy",
     "ROAST_PROMPT_TEXT": "roast",
@@ -31,6 +33,8 @@ class PromptSet:
     roast_system: str
     horoscope: str
     joke: str
+    joke_a: str
+    joke_b: str
     summary: str
     conspiracy: str
     roast: str
@@ -47,6 +51,16 @@ def _read_prompt(path: Path | None, fallback: str, override: str | None = None) 
 def load_prompts(settings: Settings, overrides: dict[str, str] | None = None) -> PromptSet:
     overrides = overrides or {}
     base_system = _read_prompt(settings.system_prompt_path, defaults.SYSTEM_BASE)
+    joke_a = _read_prompt(
+        getattr(settings, "joke_a_prompt_path", settings.joke_prompt_path),
+        defaults.JOKE_PROMPT,
+        overrides.get("JOKE_A_PROMPT_TEXT", overrides.get("JOKE_PROMPT_TEXT")),
+    )
+    joke_b = _read_prompt(
+        getattr(settings, "joke_b_prompt_path", None),
+        defaults.JOKE_B_PROMPT,
+        overrides.get("JOKE_B_PROMPT_TEXT"),
+    )
     return PromptSet(
         answer_system=_read_prompt(None, defaults.ANSWER_SYSTEM_PROMPT, overrides.get("ANSWER_SYSTEM_PROMPT_TEXT")),
         summary_system=_read_prompt(None, base_system, overrides.get("SUMMARY_SYSTEM_PROMPT_TEXT")),
@@ -55,7 +69,9 @@ def load_prompts(settings: Settings, overrides: dict[str, str] | None = None) ->
         joke_system=_read_prompt(None, "", overrides.get("JOKE_SYSTEM_PROMPT_TEXT")),
         roast_system=_read_prompt(None, "", overrides.get("ROAST_SYSTEM_PROMPT_TEXT")),
         horoscope=_read_prompt(settings.horoscope_prompt_path, defaults.HOROSCOPE_PROMPT, overrides.get("HOROSCOPE_PROMPT_TEXT")),
-        joke=_read_prompt(settings.joke_prompt_path, defaults.JOKE_PROMPT, overrides.get("JOKE_PROMPT_TEXT")),
+        joke=joke_a,
+        joke_a=joke_a,
+        joke_b=joke_b,
         summary=_read_prompt(settings.summary_prompt_path, defaults.SUMMARY_PROMPT, overrides.get("SUMMARY_PROMPT_TEXT")),
         conspiracy=_read_prompt(settings.conspiracy_prompt_path, defaults.CONSPIRACY_PROMPT, overrides.get("CONSPIRACY_PROMPT_TEXT")),
         roast=_read_prompt(settings.roast_prompt_path, defaults.ROAST_PROMPT, overrides.get("ROAST_PROMPT_TEXT")),
