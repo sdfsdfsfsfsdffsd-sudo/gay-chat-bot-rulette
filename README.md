@@ -57,7 +57,8 @@ Empty `JOKE_MODEL` falls back to the uncensored default model.
 
 Schedules can be changed from `/admin` without restarting the bot. For the
 `*_EVERY_DAYS` values, `0` disables automatic posts, `1` means every day, and
-larger values mean once per that many days at the configured time.
+larger values mean once per that many days at the configured time. Decimal
+values are supported, so `0.5` means every 12 hours.
 
 ```env
 HOROSCOPE_TIME=09:30

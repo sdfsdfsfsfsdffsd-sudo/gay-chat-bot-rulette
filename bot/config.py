@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 from dataclasses import dataclass, fields
+from math import isfinite
 from pathlib import Path
 from typing import Callable
 
@@ -14,6 +15,31 @@ MODEL_SETTING_FIELDS = {
     "HOROSCOPE_MODEL": "horoscope_model",
     "JOKE_MODEL": "joke_model",
     "ROAST_MODEL": "roast_model",
+}
+
+DECIMAL_DAY_SETTING_KEYS = {
+    "HOROSCOPE_EVERY_DAYS",
+    "SUMMARY_EVERY_DAYS",
+    "JOKE_EVERY_DAYS",
+    "CONSPIRACY_EVERY_DAYS",
+}
+NONNEGATIVE_INTEGER_SETTING_KEYS = {
+    "ALABUGA_EVERY_HOURS",
+    "RANDOM_IMAGE_EVERY_MINUTES",
+    "ROAST_EVERY_MINUTES",
+}
+POSITIVE_INTEGER_SETTING_KEYS = {
+    "SUMMARY_CONTEXT_HOURS",
+    "HOROSCOPE_CONTEXT_DAYS",
+    "CONSPIRACY_CONTEXT_DAYS",
+    "ROAST_CONTEXT_DAYS",
+}
+TIME_SETTING_KEYS = {
+    "HOROSCOPE_TIME",
+    "DAILY_SUMMARY_TIME",
+    "WORD_STATS_TIME",
+    "JOKE_TIME",
+    "CONSPIRACY_TIME",
 }
 
 
@@ -69,12 +95,12 @@ class Settings:
     alabuga_channel_url: str
     alabuga_jobs_url: str | None
     horoscope_time: str
-    horoscope_every_days: int
+    horoscope_every_days: float
     daily_summary_time: str
-    summary_every_days: int
+    summary_every_days: float
     word_stats_time: str
     joke_time: str
-    joke_every_days: int
+    joke_every_days: float
     conspiracy_time: str
     alabuga_every_hours: int
     summary_context_hours: int
@@ -86,7 +112,7 @@ class Settings:
     random_image_probability: float
     roast_every_minutes: int
     roast_probability: float
-    conspiracy_every_days: int
+    conspiracy_every_days: float
     answer_params: GenerationParams
     summary_params: GenerationParams
     conspiracy_params: GenerationParams
@@ -144,13 +170,59 @@ def _storage_path(
 def _optional_float(value: str | None) -> float | None:
     if value is None or not value.strip():
         return None
-    return float(value)
+    try:
+        parsed = float(value)
+    except ValueError:
+        return None
+    return parsed if isfinite(parsed) else None
 
 
 def _optional_int_value(value: str | None) -> int | None:
     if value is None or not value.strip():
         return None
-    return int(value)
+    try:
+        return int(value)
+    except ValueError:
+        return None
+
+
+def _int_value(value: str | None, default: int) -> int:
+    parsed = _optional_int_value(value)
+    return parsed if parsed is not None else default
+
+
+def _float_value(value: str | None, default: float) -> float:
+    parsed = _optional_float(value)
+    return parsed if parsed is not None else default
+
+
+def validate_setting_override(key: str, value: str) -> None:
+    if key in DECIMAL_DAY_SETTING_KEYS:
+        number = float(value)
+        if not isfinite(number) or number < 0:
+            raise ValueError("Значение должно быть числом не меньше 0. Дробные дни разрешены: 0.5 = 12 часов.")
+    elif key in NONNEGATIVE_INTEGER_SETTING_KEYS:
+        if int(value) < 0:
+            raise ValueError("Значение должно быть целым числом не меньше 0.")
+    elif key in POSITIVE_INTEGER_SETTING_KEYS:
+        if int(value) <= 0:
+            raise ValueError("Значение должно быть целым числом больше 0.")
+    elif key in TIME_SETTING_KEYS:
+        parts = value.split(":")
+        if len(parts) != 2 or not all(part.isdigit() for part in parts):
+            raise ValueError("Время должно быть в формате HH:MM, например 18:30.")
+        hour, minute = map(int, parts)
+        if not 0 <= hour <= 23 or not 0 <= minute <= 59:
+            raise ValueError("Время должно быть в диапазоне 00:00–23:59.")
+
+
+def _time_value(value: str | None, default: str) -> str:
+    candidate = value.strip() if value else default
+    try:
+        validate_setting_override("HOROSCOPE_TIME", candidate)
+    except ValueError:
+        return default
+    return candidate
 
 
 def _generation_params(
@@ -160,7 +232,7 @@ def _generation_params(
     default_max_tokens: int = 900,
 ) -> GenerationParams:
     return GenerationParams(
-        temperature=float(get(f"{prefix}_TEMPERATURE", str(default_temperature))),
+        temperature=_float_value(get(f"{prefix}_TEMPERATURE", str(default_temperature)), default_temperature),
         top_p=_optional_float(get(f"{prefix}_TOP_P", "")),
         top_k=_optional_int_value(get(f"{prefix}_TOP_K", "")),
         presence_penalty=_optional_float(get(f"{prefix}_PRESENCE_PENALTY", "")),
@@ -168,7 +240,7 @@ def _generation_params(
         repetition_penalty=_optional_float(get(f"{prefix}_REPETITION_PENALTY", "")),
         min_p=_optional_float(get(f"{prefix}_MIN_P", "")),
         top_a=_optional_float(get(f"{prefix}_TOP_A", "")),
-        max_tokens=int(get(f"{prefix}_MAX_TOKENS", str(default_max_tokens))),
+        max_tokens=_int_value(get(f"{prefix}_MAX_TOKENS", str(default_max_tokens)), default_max_tokens),
     )
 
 
@@ -223,25 +295,25 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         image_source_channels=_csv(get("IMAGE_SOURCE_CHANNELS", "")),
         alabuga_channel_url=get("ALABUGA_CHANNEL_URL", "https://t.me/s/alabugapolytech"),
         alabuga_jobs_url=(get("ALABUGA_JOBS_URL", "") or "").strip() or None,
-        horoscope_time=get("HOROSCOPE_TIME", "09:30"),
-        horoscope_every_days=int(get("HOROSCOPE_EVERY_DAYS", "1")),
-        daily_summary_time=get("DAILY_SUMMARY_TIME", "23:30"),
-        summary_every_days=int(get("SUMMARY_EVERY_DAYS", "1")),
-        word_stats_time=get("WORD_STATS_TIME", get("DAILY_SUMMARY_TIME", "23:30")),
-        joke_time=get("JOKE_TIME", "18:00"),
-        joke_every_days=int(get("JOKE_EVERY_DAYS", "1")),
-        conspiracy_time=get("CONSPIRACY_TIME", "20:00"),
-        alabuga_every_hours=int(get("ALABUGA_EVERY_HOURS", "4")),
-        summary_context_hours=int(get("SUMMARY_CONTEXT_HOURS", "24")),
-        horoscope_context_days=int(get("HOROSCOPE_CONTEXT_DAYS", "7")),
-        conspiracy_context_days=int(get("CONSPIRACY_CONTEXT_DAYS", "3")),
-        roast_context_days=int(get("ROAST_CONTEXT_DAYS", "3")),
+        horoscope_time=_time_value(get("HOROSCOPE_TIME", "09:30"), "09:30"),
+        horoscope_every_days=_float_value(get("HOROSCOPE_EVERY_DAYS", "1"), 1.0),
+        daily_summary_time=_time_value(get("DAILY_SUMMARY_TIME", "23:30"), "23:30"),
+        summary_every_days=_float_value(get("SUMMARY_EVERY_DAYS", "1"), 1.0),
+        word_stats_time=_time_value(get("WORD_STATS_TIME", get("DAILY_SUMMARY_TIME", "23:30")), "23:30"),
+        joke_time=_time_value(get("JOKE_TIME", "18:00"), "18:00"),
+        joke_every_days=_float_value(get("JOKE_EVERY_DAYS", "1"), 1.0),
+        conspiracy_time=_time_value(get("CONSPIRACY_TIME", "20:00"), "20:00"),
+        alabuga_every_hours=_int_value(get("ALABUGA_EVERY_HOURS", "4"), 4),
+        summary_context_hours=_int_value(get("SUMMARY_CONTEXT_HOURS", "24"), 24),
+        horoscope_context_days=_int_value(get("HOROSCOPE_CONTEXT_DAYS", "7"), 7),
+        conspiracy_context_days=_int_value(get("CONSPIRACY_CONTEXT_DAYS", "3"), 3),
+        roast_context_days=_int_value(get("ROAST_CONTEXT_DAYS", "3"), 3),
         tracked_words=_csv(get("TRACKED_WORDS", "")),
-        random_image_every_minutes=int(get("RANDOM_IMAGE_EVERY_MINUTES", "180")),
-        random_image_probability=float(get("RANDOM_IMAGE_PROBABILITY", "0.35")),
-        roast_every_minutes=int(get("ROAST_EVERY_MINUTES", "240")),
-        roast_probability=float(get("ROAST_PROBABILITY", "0.25")),
-        conspiracy_every_days=int(get("CONSPIRACY_EVERY_DAYS", "3")),
+        random_image_every_minutes=_int_value(get("RANDOM_IMAGE_EVERY_MINUTES", "180"), 180),
+        random_image_probability=_float_value(get("RANDOM_IMAGE_PROBABILITY", "0.35"), 0.35),
+        roast_every_minutes=_int_value(get("ROAST_EVERY_MINUTES", "240"), 240),
+        roast_probability=_float_value(get("ROAST_PROBABILITY", "0.25"), 0.25),
+        conspiracy_every_days=_float_value(get("CONSPIRACY_EVERY_DAYS", "3"), 3.0),
         answer_params=_generation_params("ANSWER", 0.7, get, 1800),
         summary_params=_generation_params("SUMMARY", 0.5, get),
         conspiracy_params=_generation_params("CONSPIRACY", 1.05, get),

@@ -5,7 +5,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from bot.config import effective_model_settings, load_settings
+from bot.config import effective_model_settings, load_settings, validate_setting_override
 
 
 class ConfigTests(unittest.TestCase):
@@ -112,6 +112,39 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(settings.horoscope_context_days, 5)
         self.assertEqual(settings.conspiracy_context_days, 4)
         self.assertEqual(settings.roast_context_days, 3)
+
+    def test_fractional_day_schedule_is_supported(self) -> None:
+        overrides = {
+            "TELEGRAM_BOT_TOKEN": "token",
+            "OPENROUTER_API_KEY": "key",
+            "JOKE_EVERY_DAYS": "0.5",
+        }
+        with patch.dict(os.environ, {}, clear=True), patch("bot.config.load_dotenv"):
+            settings = load_settings(overrides)
+
+        self.assertEqual(settings.joke_every_days, 0.5)
+
+    def test_invalid_persisted_numbers_do_not_prevent_startup(self) -> None:
+        overrides = {
+            "TELEGRAM_BOT_TOKEN": "token",
+            "OPENROUTER_API_KEY": "key",
+            "JOKE_EVERY_DAYS": "not-a-number",
+            "JOKE_TEMPERATURE": "also-invalid",
+            "JOKE_TOP_K": "0.5",
+            "JOKE_TIME": "99:70",
+        }
+        with patch.dict(os.environ, {}, clear=True), patch("bot.config.load_dotenv"):
+            settings = load_settings(overrides)
+
+        self.assertEqual(settings.joke_every_days, 1.0)
+        self.assertEqual(settings.joke_params.temperature, 1.0)
+        self.assertIsNone(settings.joke_params.top_k)
+        self.assertEqual(settings.joke_time, "18:00")
+
+    def test_admin_setting_validation_accepts_half_day_and_rejects_bad_time(self) -> None:
+        validate_setting_override("JOKE_EVERY_DAYS", "0.5")
+        with self.assertRaises(ValueError):
+            validate_setting_override("JOKE_TIME", "25:00")
 
     def test_effective_model_settings_returns_admin_keys(self) -> None:
         env = {

@@ -23,7 +23,7 @@ from bot.admin_panel import (
     PROMPT_TEXT_KEYS,
 )
 from bot.answer_pipeline import AnswerExtractionError, generate_clean_answer
-from bot.config import Settings
+from bot.config import Settings, validate_setting_override
 from bot.llm import OpenRouterClient
 from bot.prompt_loader import PromptSet
 from bot.runtime_config import sync_runtime_config
@@ -276,6 +276,13 @@ def build_router(
             )
         else:
             if value:
+                try:
+                    validate_setting_override(key, value)
+                except (ValueError, OverflowError) as error:
+                    await message.answer(
+                        f"Некорректное значение для {key}: {error}",
+                    )
+                    return
                 await storage.set_setting_override(key, value)
                 action_text = "Saved setting override in SQLite."
             else:

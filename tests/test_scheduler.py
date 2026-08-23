@@ -37,6 +37,10 @@ class SchedulerTests(unittest.TestCase):
         self.assertEqual(trigger.interval, timedelta(days=3))
         self.assertEqual(trigger.start_date, datetime(2026, 8, 23, 18, 0, tzinfo=timezone))
 
+        half_day_trigger = periodic_day_trigger(0.5, "18:00", timezone, now=now)
+        self.assertIsInstance(half_day_trigger, IntervalTrigger)
+        self.assertEqual(half_day_trigger.interval, timedelta(hours=12))
+
     def test_configure_scheduler_omits_disabled_jobs(self) -> None:
         settings = SimpleNamespace(
             timezone="Europe/Warsaw",

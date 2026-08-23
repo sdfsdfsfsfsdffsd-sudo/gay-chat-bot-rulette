@@ -29,7 +29,7 @@ def _hour_min(value: str) -> tuple[int, int]:
     return int(hour), int(minute)
 
 
-def periodic_day_trigger(every_days: int, time_value: str, tz: ZoneInfo, *, now: datetime | None = None):
+def periodic_day_trigger(every_days: float, time_value: str, tz: ZoneInfo, *, now: datetime | None = None):
     if every_days <= 0:
         return None
     hour, minute = _hour_min(time_value)
