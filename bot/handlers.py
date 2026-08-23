@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
+import html
+import logging
 import random
 import re
 from collections.abc import Awaitable, Callable
@@ -33,6 +35,9 @@ from bot.sources import fetch_random_telegram_item
 from bot.storage import Storage
 from bot.telegram_format import normalize_telegram_html
 from bot.word_stats import build_daily_word_stats
+
+
+logger = logging.getLogger(__name__)
 
 
 def participants_block(participants: list[str]) -> str:
@@ -406,14 +411,72 @@ def build_router(
         elif settings.bully_target_username or settings.target_username:
             target = format_roast_target(settings.bully_target_username or settings.target_username or "")
         else:
-            target = random.choice(participants) if participants else ""
+            target = ""
 
         if not target:
-            await message.answer("Некого bully-ить: укажи `/bully @username`, задай BULLY_TARGET_USERNAME в админке или напиши в чат пару сообщений.", parse_mode="Markdown")
+            await message.answer(
+                "Некого bully-ить: укажи <code>/bully @username</code> или задай "
+                "<code>BULLY_TARGET_USERNAME</code> через <code>/bully_target</code> или админку.",
+                parse_mode="HTML",
+            )
             return
 
         text = render_bully_message(settings.bully_message_text, target)
         await message.answer(normalize_telegram_html(text)[:4000], parse_mode="HTML")
+
+    @router.message(Command("bully_text"))
+    async def bully_text(message: Message) -> None:
+        if not is_admin(message):
+            return
+        await sync_runtime_config(settings, prompts, storage)
+        value = command_argument(message.text)
+        if not value:
+            await message.answer(
+                "<b>Текущий bully-текст</b>\n"
+                f"<code>{html.escape(settings.bully_message_text)}</code>\n\n"
+                "Изменить: <code>/bully_text новый текст {target}</code>\n"
+                "Сбросить: <code>/bully_text -</code>\n"
+                "Доступные плейсхолдеры: <code>{target}</code>, <code>{username}</code>",
+                parse_mode="HTML",
+            )
+            return
+        if value == "-":
+            await storage.clear_setting_override("BULLY_MESSAGE_TEXT")
+            await refresh_runtime_config()
+            await message.answer("Bully-текст сброшен на дефолт.")
+            return
+        await storage.set_setting_override("BULLY_MESSAGE_TEXT", value)
+        await refresh_runtime_config()
+        await message.answer(
+            "Bully-текст сохранён:\n"
+            f"<code>{html.escape(value)}</code>",
+            parse_mode="HTML",
+        )
+
+    @router.message(Command("bully_target"))
+    async def bully_target(message: Message) -> None:
+        if not is_admin(message):
+            return
+        await sync_runtime_config(settings, prompts, storage)
+        value = command_argument(message.text).strip().lstrip("@")
+        if not value:
+            current = settings.bully_target_username or settings.target_username or ""
+            await message.answer(
+                "<b>Текущая bully-цель</b>\n"
+                f"<code>{html.escape('@' + current if current else '<не задано>')}</code>\n\n"
+                "Изменить: <code>/bully_target username</code>\n"
+                "Сбросить: <code>/bully_target -</code>",
+                parse_mode="HTML",
+            )
+            return
+        if value == "-":
+            await storage.clear_setting_override("BULLY_TARGET_USERNAME")
+            await refresh_runtime_config()
+            await message.answer("Bully-цель сброшена.")
+            return
+        await storage.set_setting_override("BULLY_TARGET_USERNAME", value)
+        await refresh_runtime_config()
+        await message.answer(f"Bully-цель сохранена: <code>@{html.escape(value)}</code>", parse_mode="HTML")
 
     @router.message(Command("word_stats_now"))
     async def word_stats_now(message: Message) -> None:
@@ -434,8 +497,8 @@ def build_router(
             try:
                 await bot.forward_message(message.chat.id, f"@{item.channel_username}", item.message_id)
                 return
-            except Exception:
-                pass
+            except Exception as error:
+                logger.warning("Could not forward Telegram post %s/%s: %s", item.channel_username, item.message_id, error)
         await message.answer(f"Alabuga Polytech:\n\n{item.text[:3400]}\n\n{item.url}")
 
 

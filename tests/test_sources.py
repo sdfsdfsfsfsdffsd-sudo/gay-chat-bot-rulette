@@ -12,6 +12,9 @@ class TelegramSourceTests(unittest.TestCase):
             ("alabugapolytech", 123),
         )
 
+    def test_parse_tg_post_ref_extracts_data_post_value(self) -> None:
+        self.assertEqual(parse_tg_post_ref("alabugapolytech/123"), ("alabugapolytech", 123))
+
     def test_parse_tg_post_ref_ignores_web_preview_urls(self) -> None:
         self.assertIsNone(parse_tg_post_ref("https://t.me/s/alabugapolytech"))
 

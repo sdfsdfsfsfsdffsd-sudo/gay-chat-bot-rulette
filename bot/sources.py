@@ -49,8 +49,8 @@ def normalize_tg_web_url(source: str) -> str | None:
     return None
 
 
-def parse_tg_post_ref(url: str) -> tuple[str, int] | None:
-    match = re.search(r"https://t\.me/(?!s/)([A-Za-z0-9_]{5,})/(\d+)", url)
+def parse_tg_post_ref(value: str) -> tuple[str, int] | None:
+    match = re.search(r"(?:https://t\.me/)?(?!s/)([A-Za-z0-9_]{5,})/(\d+)", value)
     if not match:
         return None
     return match.group(1), int(match.group(2))
@@ -69,7 +69,7 @@ async def fetch_telegram_feed(url: str, *, limit: int = 8) -> list[FeedItem]:
         text = text_node.get_text("\n", strip=True) if text_node else ""
         link_node = message.select_one(".tgme_widget_message_date a")
         href = link_node["href"] if link_node and link_node.has_attr("href") else url
-        post_ref = parse_tg_post_ref(href)
+        post_ref = parse_tg_post_ref(post_url) or parse_tg_post_ref(href)
         if text:
             items.append(
                 FeedItem(

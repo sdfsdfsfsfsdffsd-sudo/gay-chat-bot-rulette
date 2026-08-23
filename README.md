@@ -118,6 +118,13 @@ SQLite and applied immediately without changing `.env` or restarting the bot.
 `/bully` does not call the LLM. It uses `BULLY_MESSAGE_TEXT` from `/admin`
 or `.env`; the template supports `{target}` and `{username}`. The default
 target is `BULLY_TARGET_USERNAME`, falling back to the older `TARGET_USERNAME`.
+Quick commands:
+
+```text
+/bully_text
+/bully_text {target}, your custom text
+/bully_target morchao
+```
 
 Temperatures are also configurable:
 
@@ -216,6 +223,8 @@ receive the full menu in their private chat and in the bound group.
 - `/joke_now`, `/joke_now a`, `/joke_now b` - generates a joke immediately.
 - `/conspiracy_now` - generates a conspiracy post immediately.
 - `/bully @username` - sends the static bully template.
+- `/bully_text` - shows or changes the static bully text.
+- `/bully_target` - shows or changes the default bully target.
 - `/alabuga_random` - forwards a random Alabuga Polytech post when Telegram allows it.
 - `/word_stats_now` - prints daily tracked-word stats immediately.
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import random
+import logging
 from datetime import datetime, timedelta
 
 from aiogram import Bot
@@ -23,6 +24,9 @@ from bot.sources import (
 from bot.storage import Storage
 from bot.telegram_format import normalize_telegram_html
 from bot.word_stats import build_daily_word_stats
+
+
+logger = logging.getLogger(__name__)
 
 
 def _hour_min(value: str) -> tuple[int, int]:
@@ -60,8 +64,8 @@ async def _forward_or_send_feed_item(bot: Bot, chat_id: int | None, item) -> Non
         try:
             await bot.forward_message(chat_id, f"@{item.channel_username}", item.message_id)
             return
-        except Exception:
-            pass
+        except Exception as error:
+            logger.warning("Could not forward Telegram post %s/%s: %s", item.channel_username, item.message_id, error)
     await _send_text(bot, chat_id, f"Alabuga Polytech:\n\n{item.text}\n\n{item.url}")
 
 

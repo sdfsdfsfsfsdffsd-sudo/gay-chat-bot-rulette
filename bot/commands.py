@@ -30,6 +30,8 @@ COMMANDS = (
     CommandDefinition("joke_now", "Анекдот сейчас: a, b или random"),
     CommandDefinition("conspiracy_now", "Создать теорию заговора сейчас"),
     CommandDefinition("bully", "Отправить bully-шаблон участнику"),
+    CommandDefinition("bully_text", "Показать или изменить bully-текст"),
+    CommandDefinition("bully_target", "Показать или изменить bully-цель"),
     CommandDefinition("word_stats_now", "Показать статистику слов"),
     CommandDefinition("alabuga_random", "Случайный пост Алабуга Политех"),
 )
