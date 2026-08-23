@@ -239,6 +239,10 @@ Bot API forwarding can fail when the bot account has no access to the source
 channel or Telegram blocks forwarding. To enable the userbot fallback, create a
 Telegram app at `my.telegram.org`, run:
 
+If Railway logs contain `message to forward not found`, the Bot API path has
+failed and the bot will copy text unless `TELEGRAM_USER_*` userbot settings are
+configured. Check the current state with `/forward_config`.
+
 ```bash
 python make_telegram_user_session.py
 ```

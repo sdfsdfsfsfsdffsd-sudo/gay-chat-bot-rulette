@@ -24,6 +24,7 @@ class CommandRegistryTests(unittest.TestCase):
         self.assertEqual(public_names, {"start", "commands"})
         self.assertIn("admin", admin_names)
         self.assertIn("conspiracy_now", admin_names)
+        self.assertIn("forward_config", admin_names)
         self.assertIn("bully_text", admin_names)
         self.assertIn("bully_target", admin_names)
         self.assertNotIn("admin", public_names)

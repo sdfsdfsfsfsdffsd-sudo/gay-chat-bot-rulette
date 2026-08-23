@@ -12,10 +12,21 @@ logger = logging.getLogger(__name__)
 
 def userbot_is_configured(settings: "Settings") -> bool:
     return bool(
-        settings.telegram_user_api_id
-        and settings.telegram_user_api_hash
-        and settings.telegram_user_session
+        getattr(settings, "telegram_user_api_id", None)
+        and getattr(settings, "telegram_user_api_hash", "")
+        and getattr(settings, "telegram_user_session", "")
     )
+
+
+def missing_userbot_fields(settings: "Settings") -> list[str]:
+    missing: list[str] = []
+    if not getattr(settings, "telegram_user_api_id", None):
+        missing.append("TELEGRAM_USER_API_ID")
+    if not getattr(settings, "telegram_user_api_hash", ""):
+        missing.append("TELEGRAM_USER_API_HASH")
+    if not getattr(settings, "telegram_user_session", ""):
+        missing.append("TELEGRAM_USER_SESSION")
+    return missing
 
 
 async def forward_post_with_userbot(
@@ -25,6 +36,10 @@ async def forward_post_with_userbot(
     message_id: int,
 ) -> bool:
     if not userbot_is_configured(settings):
+        logger.info(
+            "Userbot forward skipped: missing %s",
+            ", ".join(missing_userbot_fields(settings)),
+        )
         return False
     try:
         from telethon import TelegramClient

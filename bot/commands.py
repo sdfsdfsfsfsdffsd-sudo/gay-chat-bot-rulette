@@ -24,6 +24,7 @@ COMMANDS = (
     CommandDefinition("commands", "Показать доступные команды", "public"),
     CommandDefinition("admin", "Открыть панель управления"),
     CommandDefinition("runtime_config", "Показать модели и параметры runtime"),
+    CommandDefinition("forward_config", "Показать настройки Telegram forward"),
     CommandDefinition("bind_chat", "Привязать текущий чат"),
     CommandDefinition("summary_now", "Сделать сводку сейчас"),
     CommandDefinition("horoscope_now", "Сделать гороскоп сейчас"),

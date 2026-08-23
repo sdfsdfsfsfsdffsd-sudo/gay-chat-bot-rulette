@@ -34,7 +34,7 @@ from bot.runtime_config import sync_runtime_config
 from bot.sources import fetch_random_telegram_item
 from bot.storage import Storage
 from bot.telegram_format import normalize_telegram_html
-from bot.userbot import forward_post_with_userbot
+from bot.userbot import forward_post_with_userbot, missing_userbot_fields, userbot_is_configured
 from bot.word_stats import build_daily_word_stats
 
 
@@ -87,6 +87,12 @@ def command_argument(text: str | None) -> str:
 
 def build_runtime_config_text(settings: Settings, prompts: PromptSet) -> str:
     rows = ["Effective runtime config:"]
+    missing_forward_fields = missing_userbot_fields(settings)
+    rows.append(
+        "telegram_forwarding: "
+        f"userbot={'configured' if userbot_is_configured(settings) else 'missing'} | "
+        f"missing={','.join(missing_forward_fields) if missing_forward_fields else 'none'}"
+    )
     for service in ("answer", "summary", "conspiracy", "horoscope", "joke", "roast"):
         model = getattr(settings, f"{service}_model")
         system_prompt = getattr(prompts, f"{service}_system").strip()
@@ -203,6 +209,24 @@ def build_router(
             return
         await sync_runtime_config(settings, prompts, storage)
         await message.answer(build_runtime_config_text(settings, prompts))
+
+    @router.message(Command("forward_config"))
+    async def forward_config(message: Message) -> None:
+        if not is_admin(message):
+            return
+        await sync_runtime_config(settings, prompts, storage)
+        missing = missing_userbot_fields(settings)
+        status = "configured" if not missing else "missing"
+        await message.answer(
+            "<b>Telegram forward config</b>\n\n"
+            f"Bot API forward: <code>enabled</code>\n"
+            f"Userbot forward: <code>{status}</code>\n"
+            f"Missing: <code>{html.escape(', '.join(missing) if missing else 'none')}</code>\n\n"
+            "Если Bot API пишет <code>message to forward not found</code>, нужен userbot: "
+            "<code>TELEGRAM_USER_API_ID</code>, <code>TELEGRAM_USER_API_HASH</code>, "
+            "<code>TELEGRAM_USER_SESSION</code>.",
+            parse_mode="HTML",
+        )
 
     @router.callback_query(lambda callback: bool(callback.data and callback.data.startswith("admin:")))
     async def admin_callback(callback: CallbackQuery) -> None:
