@@ -109,6 +109,13 @@ def build_runtime_config_text(settings: Settings, prompts: PromptSet) -> str:
         rows.append(
             f"{service}: model={model} | system_sha256={fingerprint} | system_chars={len(system_prompt)}"
         )
+        params = getattr(settings, f"{service}_params")
+        rows.append(
+            "  sampling: "
+            f"temperature={params.temperature} | top_p={params.top_p} | top_k={params.top_k} | "
+            f"presence={params.presence_penalty} | frequency={params.frequency_penalty} | "
+            f"repetition={params.repetition_penalty} | max_tokens={params.max_tokens}"
+        )
     return "\n".join(rows)
 
 

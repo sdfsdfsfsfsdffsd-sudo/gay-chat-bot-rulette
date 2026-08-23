@@ -50,7 +50,7 @@ def load_prompts(settings: Settings, overrides: dict[str, str] | None = None) ->
     return PromptSet(
         answer_system=_read_prompt(None, defaults.ANSWER_SYSTEM_PROMPT, overrides.get("ANSWER_SYSTEM_PROMPT_TEXT")),
         summary_system=_read_prompt(None, base_system, overrides.get("SUMMARY_SYSTEM_PROMPT_TEXT")),
-        conspiracy_system=_read_prompt(None, base_system, overrides.get("CONSPIRACY_SYSTEM_PROMPT_TEXT")),
+        conspiracy_system=_read_prompt(None, "", overrides.get("CONSPIRACY_SYSTEM_PROMPT_TEXT")),
         horoscope_system=_read_prompt(None, "", overrides.get("HOROSCOPE_SYSTEM_PROMPT_TEXT")),
         joke_system=_read_prompt(None, "", overrides.get("JOKE_SYSTEM_PROMPT_TEXT")),
         roast_system=_read_prompt(None, "", overrides.get("ROAST_SYSTEM_PROMPT_TEXT")),

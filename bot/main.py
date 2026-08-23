@@ -9,6 +9,7 @@ from bot.config import apply_settings, effective_model_settings, load_settings
 from bot.handlers import build_router
 from bot.llm import OpenRouterClient
 from bot.prompt_loader import load_prompts
+from bot.prompts import ANSWER_SYSTEM_PROMPT
 from bot.scheduler import build_scheduler, configure_scheduler
 from bot.storage import Storage
 
@@ -82,4 +83,11 @@ async def migrate_runtime_settings(storage: Storage, bootstrap_settings, setting
             and bootstrap_settings.joke_model != LEGACY_JOKE_MODEL
         ):
             await storage.set_setting_override("JOKE_MODEL", bootstrap_settings.joke_model)
-        await storage.set_setting_override(SETTINGS_SCHEMA_VERSION_KEY, "1")
+    if schema_version < 2:
+        prompt_overrides = await storage.prompt_overrides()
+        conspiracy_system = prompt_overrides.get("CONSPIRACY_SYSTEM_PROMPT_TEXT", "").strip()
+        if conspiracy_system == ANSWER_SYSTEM_PROMPT.strip():
+            await storage.clear_prompt_override("CONSPIRACY_SYSTEM_PROMPT_TEXT")
+
+    if schema_version < 2:
+        await storage.set_setting_override(SETTINGS_SCHEMA_VERSION_KEY, "2")

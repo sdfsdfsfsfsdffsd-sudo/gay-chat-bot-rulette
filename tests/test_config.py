@@ -146,6 +146,19 @@ class ConfigTests(unittest.TestCase):
         with self.assertRaises(ValueError):
             validate_setting_override("JOKE_TIME", "25:00")
 
+    def test_conspiracy_defaults_favor_coherent_output(self) -> None:
+        overrides = {
+            "TELEGRAM_BOT_TOKEN": "token",
+            "OPENROUTER_API_KEY": "key",
+        }
+        with patch.dict(os.environ, {}, clear=True), patch("bot.config.load_dotenv"):
+            settings = load_settings(overrides)
+
+        self.assertEqual(settings.conspiracy_params.temperature, 0.85)
+        self.assertEqual(settings.conspiracy_params.top_p, 0.95)
+        self.assertEqual(settings.conspiracy_params.presence_penalty, 0.0)
+        self.assertEqual(settings.conspiracy_params.frequency_penalty, 0.05)
+
     def test_effective_model_settings_returns_admin_keys(self) -> None:
         env = {
             "TELEGRAM_BOT_TOKEN": "token",

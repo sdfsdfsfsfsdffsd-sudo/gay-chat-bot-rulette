@@ -82,6 +82,18 @@ class AnswerPipelineTests(unittest.TestCase):
             horoscope_model="horoscope/model",
             joke_model="joke/model",
             roast_model="roast/model",
+            **{
+                f"{service}_params": SimpleNamespace(
+                    temperature=0.85,
+                    top_p=0.95,
+                    top_k=None,
+                    presence_penalty=0.0,
+                    frequency_penalty=0.05,
+                    repetition_penalty=None,
+                    max_tokens=900,
+                )
+                for service in ("answer", "summary", "conspiracy", "horoscope", "joke", "roast")
+            },
         )
         prompts = SimpleNamespace(
             answer_system="",
@@ -97,6 +109,7 @@ class AnswerPipelineTests(unittest.TestCase):
         self.assertIn("conspiracy: model=new/conspiracy-model", text)
         self.assertIn("system_sha256=4e9f857599c9", text)
         self.assertIn("system_chars=28", text)
+        self.assertIn("temperature=0.85", text)
 
 
 class AnswerPipelineAsyncTests(unittest.IsolatedAsyncioTestCase):

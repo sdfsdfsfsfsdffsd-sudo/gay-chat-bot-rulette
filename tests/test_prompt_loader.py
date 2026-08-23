@@ -36,7 +36,12 @@ class PromptLoaderTests(unittest.TestCase):
             prompts = load_prompts(settings)
 
         self.assertEqual(prompts.summary_system, "custom system")
-        self.assertEqual(prompts.conspiracy_system, "custom system")
+        self.assertEqual(prompts.conspiracy_system, "")
+
+    def test_conspiracy_has_no_system_prompt_by_default(self) -> None:
+        prompts = load_prompts(settings_stub())
+
+        self.assertEqual(prompts.conspiracy_system, "")
 
     def test_empty_prompt_file_overrides_default(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:

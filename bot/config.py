@@ -230,16 +230,24 @@ def _generation_params(
     default_temperature: float,
     get: Callable[[str, str], str],
     default_max_tokens: int = 900,
+    defaults: dict[str, str] | None = None,
 ) -> GenerationParams:
+    defaults = defaults or {}
     return GenerationParams(
         temperature=_float_value(get(f"{prefix}_TEMPERATURE", str(default_temperature)), default_temperature),
-        top_p=_optional_float(get(f"{prefix}_TOP_P", "")),
-        top_k=_optional_int_value(get(f"{prefix}_TOP_K", "")),
-        presence_penalty=_optional_float(get(f"{prefix}_PRESENCE_PENALTY", "")),
-        frequency_penalty=_optional_float(get(f"{prefix}_FREQUENCY_PENALTY", "")),
-        repetition_penalty=_optional_float(get(f"{prefix}_REPETITION_PENALTY", "")),
-        min_p=_optional_float(get(f"{prefix}_MIN_P", "")),
-        top_a=_optional_float(get(f"{prefix}_TOP_A", "")),
+        top_p=_optional_float(get(f"{prefix}_TOP_P", defaults.get("TOP_P", ""))),
+        top_k=_optional_int_value(get(f"{prefix}_TOP_K", defaults.get("TOP_K", ""))),
+        presence_penalty=_optional_float(
+            get(f"{prefix}_PRESENCE_PENALTY", defaults.get("PRESENCE_PENALTY", ""))
+        ),
+        frequency_penalty=_optional_float(
+            get(f"{prefix}_FREQUENCY_PENALTY", defaults.get("FREQUENCY_PENALTY", ""))
+        ),
+        repetition_penalty=_optional_float(
+            get(f"{prefix}_REPETITION_PENALTY", defaults.get("REPETITION_PENALTY", ""))
+        ),
+        min_p=_optional_float(get(f"{prefix}_MIN_P", defaults.get("MIN_P", ""))),
+        top_a=_optional_float(get(f"{prefix}_TOP_A", defaults.get("TOP_A", ""))),
         max_tokens=_int_value(get(f"{prefix}_MAX_TOKENS", str(default_max_tokens)), default_max_tokens),
     )
 
@@ -316,7 +324,16 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         conspiracy_every_days=_float_value(get("CONSPIRACY_EVERY_DAYS", "3"), 3.0),
         answer_params=_generation_params("ANSWER", 0.7, get, 1800),
         summary_params=_generation_params("SUMMARY", 0.5, get),
-        conspiracy_params=_generation_params("CONSPIRACY", 1.05, get),
+        conspiracy_params=_generation_params(
+            "CONSPIRACY",
+            0.85,
+            get,
+            defaults={
+                "TOP_P": "0.95",
+                "PRESENCE_PENALTY": "0",
+                "FREQUENCY_PENALTY": "0.05",
+            },
+        ),
         horoscope_params=_generation_params("HOROSCOPE", 1.0, get),
         joke_params=_generation_params("JOKE", 1.0, get),
         roast_params=_generation_params("ROAST", 1.0, get),

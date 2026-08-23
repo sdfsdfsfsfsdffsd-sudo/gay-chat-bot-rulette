@@ -84,10 +84,19 @@ class OpenRouterClient:
             else "none"
         )
         logger.info(
-            "OpenRouter request: model=%s system_prompt_sha256=%s system_prompt_chars=%d",
+            "OpenRouter request: model=%s system_prompt_sha256=%s system_prompt_chars=%d "
+            "temperature=%s top_p=%s top_k=%s presence_penalty=%s frequency_penalty=%s "
+            "repetition_penalty=%s max_tokens=%s",
             payload["model"],
             system_hash,
             len(system_prompt.strip()) if system_prompt else 0,
+            payload.get("temperature"),
+            payload.get("top_p"),
+            payload.get("top_k"),
+            payload.get("presence_penalty"),
+            payload.get("frequency_penalty"),
+            payload.get("repetition_penalty"),
+            payload.get("max_tokens"),
         )
         response = await self._client.post("/chat/completions", json=payload)
         response.raise_for_status()
