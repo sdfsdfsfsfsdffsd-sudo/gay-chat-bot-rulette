@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import unittest
+from types import SimpleNamespace
 
 from bot.answer_pipeline import (
     AnswerExtractionError,
@@ -8,7 +9,13 @@ from bot.answer_pipeline import (
     generate_clean_answer,
 )
 from bot.config import GenerationParams
-from bot.handlers import build_answer_prompt, clean_question_text, command_argument, format_roast_target
+from bot.handlers import (
+    build_answer_prompt,
+    build_runtime_config_text,
+    clean_question_text,
+    command_argument,
+    format_roast_target,
+)
 
 
 ANSWER_MODEL = "cognitivecomputations/dolphin-mistral-24b-venice-edition"
@@ -66,6 +73,30 @@ class AnswerPipelineTests(unittest.TestCase):
         self.assertEqual(format_roast_target("@max"), "@max")
         self.assertEqual(format_roast_target("maxim_user"), "@maxim_user")
         self.assertEqual(format_roast_target("Max Fullname"), "Max Fullname")
+
+    def test_runtime_config_text_shows_effective_model_and_prompt_hash(self) -> None:
+        settings = SimpleNamespace(
+            answer_model="answer/model",
+            summary_model="summary/model",
+            conspiracy_model="new/conspiracy-model",
+            horoscope_model="horoscope/model",
+            joke_model="joke/model",
+            roast_model="roast/model",
+        )
+        prompts = SimpleNamespace(
+            answer_system="",
+            summary_system="",
+            conspiracy_system="new conspiracy system prompt",
+            horoscope_system="",
+            joke_system="",
+            roast_system="",
+        )
+
+        text = build_runtime_config_text(settings, prompts)
+
+        self.assertIn("conspiracy: model=new/conspiracy-model", text)
+        self.assertIn("system_sha256=4e9f857599c9", text)
+        self.assertIn("system_chars=28", text)
 
 
 class AnswerPipelineAsyncTests(unittest.IsolatedAsyncioTestCase):

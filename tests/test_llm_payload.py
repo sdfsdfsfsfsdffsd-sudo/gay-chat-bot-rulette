@@ -53,6 +53,32 @@ class LlmPayloadTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(payload["max_tokens"], 900)
         self.assertEqual(payload["messages"], [{"role": "user", "content": "question"}])
 
+    async def test_explicit_model_and_system_prompt_are_sent(self) -> None:
+        settings = SimpleNamespace(
+            openrouter_api_key="test",
+            openrouter_default_model="fallback/model",
+        )
+        llm = OpenRouterClient(settings)
+        fake_client = FakeHttpClient()
+        llm._client = fake_client
+
+        await llm.generate(
+            "user prompt",
+            model="custom/conspiracy-model",
+            system_prompt="custom conspiracy system prompt",
+        )
+
+        payload = fake_client.payload
+        assert payload is not None
+        self.assertEqual(payload["model"], "custom/conspiracy-model")
+        self.assertEqual(
+            payload["messages"],
+            [
+                {"role": "system", "content": "custom conspiracy system prompt"},
+                {"role": "user", "content": "user prompt"},
+            ],
+        )
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 from bot.config import Settings
 from bot.llm import OpenRouterClient
 from bot.prompt_loader import PromptSet
+from bot.runtime_config import sync_runtime_config
 from bot.sources import (
     fetch_latest_unsent_telegram_item,
     random_channel_image_url,
@@ -58,6 +59,7 @@ def _participants_block(participants: list[str]) -> str:
 
 
 async def send_horoscope(bot: Bot, settings: Settings, storage: Storage, llm: OpenRouterClient, prompts: PromptSet) -> None:
+    await sync_runtime_config(settings, prompts, storage)
     if settings.bot_chat_id is None:
         return
     context_hours = settings.horoscope_context_days * 24
@@ -74,6 +76,7 @@ async def send_horoscope(bot: Bot, settings: Settings, storage: Storage, llm: Op
 
 
 async def send_summary(bot: Bot, settings: Settings, storage: Storage, llm: OpenRouterClient, prompts: PromptSet) -> None:
+    await sync_runtime_config(settings, prompts, storage)
     if settings.bot_chat_id is None:
         return
     lines = await storage.recent_messages(settings.bot_chat_id, hours=settings.summary_context_hours)
@@ -92,7 +95,14 @@ async def send_summary(bot: Bot, settings: Settings, storage: Storage, llm: Open
     await _send_text(bot, settings.bot_chat_id, text, parse_mode="HTML")
 
 
-async def send_joke(bot: Bot, settings: Settings, llm: OpenRouterClient, prompts: PromptSet) -> None:
+async def send_joke(
+    bot: Bot,
+    settings: Settings,
+    storage: Storage,
+    llm: OpenRouterClient,
+    prompts: PromptSet,
+) -> None:
+    await sync_runtime_config(settings, prompts, storage)
     if settings.bot_chat_id is None:
         return
     text = await llm.generate_with_params(
@@ -118,6 +128,7 @@ async def maybe_send_random_image(bot: Bot, settings: Settings) -> None:
 
 
 async def maybe_send_roast(bot: Bot, settings: Settings, storage: Storage, llm: OpenRouterClient, prompts: PromptSet) -> None:
+    await sync_runtime_config(settings, prompts, storage)
     if settings.bot_chat_id is None or not settings.target_username:
         return
     if random.random() > settings.roast_probability:
@@ -148,6 +159,7 @@ async def maybe_send_roast(bot: Bot, settings: Settings, storage: Storage, llm: 
 
 
 async def send_conspiracy(bot: Bot, settings: Settings, storage: Storage, llm: OpenRouterClient, prompts: PromptSet) -> None:
+    await sync_runtime_config(settings, prompts, storage)
     if settings.bot_chat_id is None:
         return
     context_hours = settings.conspiracy_context_days * 24
@@ -196,7 +208,7 @@ def configure_scheduler(
     day_jobs = (
         ("horoscope", send_horoscope, settings.horoscope_every_days, settings.horoscope_time, [bot, settings, storage, llm, prompts]),
         ("summary", send_summary, settings.summary_every_days, settings.daily_summary_time, [bot, settings, storage, llm, prompts]),
-        ("joke", send_joke, settings.joke_every_days, settings.joke_time, [bot, settings, llm, prompts]),
+        ("joke", send_joke, settings.joke_every_days, settings.joke_time, [bot, settings, storage, llm, prompts]),
         ("conspiracy", send_conspiracy, settings.conspiracy_every_days, settings.conspiracy_time, [bot, settings, storage, llm, prompts]),
     )
     for job_id, function, every_days, time_value, args in day_jobs:

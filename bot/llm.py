@@ -1,10 +1,16 @@
 from __future__ import annotations
 
-import httpx
+import hashlib
+import logging
 from typing import Any
+
+import httpx
 
 from bot.config import GenerationParams
 from bot.config import Settings
+
+
+logger = logging.getLogger(__name__)
 
 
 class OpenRouterClient:
@@ -72,9 +78,26 @@ class OpenRouterClient:
             payload["provider"] = {"require_parameters": True}
         if hasattr(self._client, "headers"):
             self._client.headers["Authorization"] = f"Bearer {self.settings.openrouter_api_key}"
+        system_hash = (
+            hashlib.sha256(system_prompt.strip().encode("utf-8")).hexdigest()[:12]
+            if system_prompt and system_prompt.strip()
+            else "none"
+        )
+        logger.info(
+            "OpenRouter request: model=%s system_prompt_sha256=%s system_prompt_chars=%d",
+            payload["model"],
+            system_hash,
+            len(system_prompt.strip()) if system_prompt else 0,
+        )
         response = await self._client.post("/chat/completions", json=payload)
         response.raise_for_status()
         data = response.json()
+        logger.info(
+            "OpenRouter response: requested_model=%s response_model=%s request_id=%s",
+            payload["model"],
+            data.get("model", "unknown"),
+            data.get("id", "unknown"),
+        )
         return data["choices"][0]["message"]["content"].strip()
 
     async def generate_with_params(

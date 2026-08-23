@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import hashlib
 import random
 import re
 from collections.abc import Callable
@@ -22,9 +23,10 @@ from bot.admin_panel import (
     PROMPT_TEXT_KEYS,
 )
 from bot.answer_pipeline import AnswerExtractionError, generate_clean_answer
-from bot.config import Settings, apply_settings, load_settings
+from bot.config import Settings
 from bot.llm import OpenRouterClient
-from bot.prompt_loader import PromptSet, apply_prompts, load_prompts
+from bot.prompt_loader import PromptSet
+from bot.runtime_config import sync_runtime_config
 from bot.sources import fetch_random_telegram_item
 from bot.storage import Storage
 from bot.telegram_format import normalize_telegram_html
@@ -42,6 +44,7 @@ COMMANDS_TEXT = """<b>Команды бота</b>
 /start — проверить, что бот жив
 /commands — показать список команд
 /admin — открыть админку настроек
+/runtime_config — показать фактические runtime-модели и hash system prompt
 /bind_chat — привязать текущий чат для scheduler
 /summary_now — сразу сделать SVOдку за день
 /horoscope_now — сразу сделать персональный гороскоп
@@ -91,6 +94,22 @@ def command_argument(text: str | None) -> str:
         return ""
     parts = text.split(maxsplit=1)
     return parts[1].strip() if len(parts) > 1 else ""
+
+
+def build_runtime_config_text(settings: Settings, prompts: PromptSet) -> str:
+    rows = ["Effective runtime config:"]
+    for service in ("answer", "summary", "conspiracy", "horoscope", "joke", "roast"):
+        model = getattr(settings, f"{service}_model")
+        system_prompt = getattr(prompts, f"{service}_system").strip()
+        fingerprint = (
+            hashlib.sha256(system_prompt.encode("utf-8")).hexdigest()[:12]
+            if system_prompt
+            else "none"
+        )
+        rows.append(
+            f"{service}: model={model} | system_sha256={fingerprint} | system_chars={len(system_prompt)}"
+        )
+    return "\n".join(rows)
 
 
 def format_roast_target(value: str) -> str:
@@ -148,8 +167,7 @@ def build_router(
         return is_admin_user(message.from_user.id if message.from_user else None)
 
     async def refresh_runtime_config() -> None:
-        apply_settings(settings, load_settings(await storage.settings_overrides()))
-        apply_prompts(prompts, load_prompts(settings, await storage.prompt_overrides()))
+        await sync_runtime_config(settings, prompts, storage)
         if reload_scheduler is not None:
             reload_scheduler()
 
@@ -176,6 +194,13 @@ def build_router(
         if not is_admin(message):
             return
         await message.answer(admin_home_text(), reply_markup=admin_home_keyboard(), parse_mode="HTML")
+
+    @router.message(Command("runtime_config"))
+    async def runtime_config(message: Message) -> None:
+        if not is_admin(message):
+            return
+        await sync_runtime_config(settings, prompts, storage)
+        await message.answer(build_runtime_config_text(settings, prompts))
 
     @router.callback_query(lambda callback: bool(callback.data and callback.data.startswith("admin:")))
     async def admin_callback(callback: CallbackQuery) -> None:
@@ -280,6 +305,7 @@ def build_router(
     async def summary_now(message: Message) -> None:
         if not is_admin(message):
             return
+        await sync_runtime_config(settings, prompts, storage)
         lines = await storage.recent_messages(message.chat.id, hours=settings.summary_context_hours)
         if not lines:
             await message.answer("За сутки пока пусто.")
@@ -302,6 +328,7 @@ def build_router(
     async def horoscope_now(message: Message) -> None:
         if not is_admin(message):
             return
+        await sync_runtime_config(settings, prompts, storage)
         context_hours = settings.horoscope_context_days * 24
         participants = await storage.recent_participants(message.chat.id, hours=context_hours)
         context = "\n".join(await storage.recent_messages(message.chat.id, hours=context_hours, limit=700))
@@ -321,6 +348,7 @@ def build_router(
     async def joke_now(message: Message) -> None:
         if not is_admin(message):
             return
+        await sync_runtime_config(settings, prompts, storage)
         text = await llm.generate_with_params(
             prompts.joke,
             system_prompt=prompts.joke_system,
@@ -337,6 +365,7 @@ def build_router(
     async def conspiracy_now(message: Message) -> None:
         if not is_admin(message):
             return
+        await sync_runtime_config(settings, prompts, storage)
         context_hours = settings.conspiracy_context_days * 24
         lines = await storage.recent_messages(message.chat.id, hours=context_hours, limit=700)
         participants = await storage.recent_participants(message.chat.id, hours=context_hours)
@@ -361,6 +390,7 @@ def build_router(
     async def roast_now(message: Message) -> None:
         if not is_admin(message):
             return
+        await sync_runtime_config(settings, prompts, storage)
         arg = command_argument(message.text).lstrip("@")
         participants = await storage.recent_participants(message.chat.id, hours=24)
         if arg.lower() == "random":
@@ -453,6 +483,7 @@ def build_router(
         storage: Storage,
         llm: OpenRouterClient,
     ) -> str:
+        await sync_runtime_config(settings, prompts, storage)
         question = clean_question_text(message.text or "", bot_username)
         if wants_chat_context(message.text):
             context = "\n".join(await storage.recent_messages(message.chat.id, hours=6, limit=80))

@@ -3,6 +3,7 @@ from __future__ import annotations
 import unittest
 from datetime import datetime, timedelta
 from types import SimpleNamespace
+from unittest.mock import AsyncMock, patch
 from zoneinfo import ZoneInfo
 
 from apscheduler.triggers.cron import CronTrigger
@@ -92,12 +93,14 @@ class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
             async def generate_with_params(self, *args, **kwargs):
                 raise AssertionError("LLM must not be called without BOT_CHAT_ID")
 
-        await send_joke(
-            object(),
-            SimpleNamespace(bot_chat_id=None),
-            Llm(),
-            SimpleNamespace(joke="prompt", joke_system="system"),
-        )
+        with patch("bot.scheduler.sync_runtime_config", new=AsyncMock()):
+            await send_joke(
+                object(),
+                SimpleNamespace(bot_chat_id=None),
+                object(),
+                Llm(),
+                SimpleNamespace(joke="prompt", joke_system="system"),
+            )
 
 
 if __name__ == "__main__":

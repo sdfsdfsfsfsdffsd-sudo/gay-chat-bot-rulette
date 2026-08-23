@@ -193,6 +193,7 @@ receive them.
 
 - `/start` - quick health response.
 - `/bind_chat` - prints the current chat id for `.env`.
+- `/runtime_config` - shows effective models and system-prompt hashes from runtime.
 - `/summary_now` - generates a summary immediately.
 - `/horoscope_now` - generates a horoscope immediately.
 - `/joke_now` - generates a joke immediately.
