@@ -13,17 +13,62 @@ from setup_cli import DEFAULTS, QUESTIONS
 
 SECRET_KEYS = {"TELEGRAM_BOT_TOKEN", "OPENROUTER_API_KEY"}
 PROMPT_TEXT_KEYS = {
-    "ANSWER_SYSTEM_PROMPT_TEXT": "Answer system prompt",
-    "SUMMARY_SYSTEM_PROMPT_TEXT": "Summary system prompt",
-    "CONSPIRACY_SYSTEM_PROMPT_TEXT": "Conspiracy system prompt",
-    "HOROSCOPE_SYSTEM_PROMPT_TEXT": "Horoscope system prompt",
-    "JOKE_SYSTEM_PROMPT_TEXT": "Joke system prompt",
-    "ROAST_SYSTEM_PROMPT_TEXT": "Roast system prompt",
-    "SUMMARY_PROMPT_TEXT": "Summary prompt text",
-    "CONSPIRACY_PROMPT_TEXT": "Conspiracy prompt text",
-    "HOROSCOPE_PROMPT_TEXT": "Horoscope prompt text",
-    "JOKE_PROMPT_TEXT": "Joke prompt text",
-    "ROAST_PROMPT_TEXT": "Roast prompt text",
+    "ANSWER_SYSTEM_PROMPT_TEXT": "Ответы · System prompt",
+    "SUMMARY_SYSTEM_PROMPT_TEXT": "Сводка · System prompt",
+    "CONSPIRACY_SYSTEM_PROMPT_TEXT": "Заговоры · System prompt",
+    "HOROSCOPE_SYSTEM_PROMPT_TEXT": "Гороскоп · System prompt",
+    "JOKE_SYSTEM_PROMPT_TEXT": "Анекдоты · System prompt",
+    "ROAST_SYSTEM_PROMPT_TEXT": "Roast · System prompt",
+    "SUMMARY_PROMPT_TEXT": "Сводка · Основной промпт",
+    "CONSPIRACY_PROMPT_TEXT": "Заговоры · Основной промпт",
+    "HOROSCOPE_PROMPT_TEXT": "Гороскоп · Основной промпт",
+    "JOKE_PROMPT_TEXT": "Анекдоты · Основной промпт",
+    "ROAST_PROMPT_TEXT": "Roast · Основной промпт",
+}
+
+FIELD_LABELS = {
+    "TELEGRAM_BOT_TOKEN": "Токен Telegram-бота",
+    "OPENROUTER_API_KEY": "Ключ OpenRouter API",
+    "BOT_CHAT_ID": "Привязанный чат (Chat ID)",
+    "ADMIN_USER_IDS": "Администраторы (Telegram ID через запятую)",
+    "TARGET_USERNAME": "Участник для автоматического roast",
+    "TIMEZONE": "Часовой пояс",
+    "OPENROUTER_DEFAULT_MODEL": "Модель по умолчанию",
+    "OPENROUTER_QUALITY_MODEL": "Качественная модель",
+    "OPENROUTER_CHEAP_MODEL": "Экономичная модель",
+    "IMAGE_SOURCE_CHANNELS": "Каналы-источники изображений",
+    "ALABUGA_CHANNEL_URL": "Канал Алабуга Политех",
+    "ALABUGA_JOBS_URL": "Источник вакансий Алабуги",
+    "LOCAL_IMAGE_DIR": "Каталог локальных изображений",
+    "DATABASE_PATH": "Путь к SQLite",
+    "TRACKED_WORDS": "Отслеживаемые слова",
+}
+
+SERVICE_LABELS = {
+    "ANSWER": "Ответы",
+    "SUMMARY": "Сводка",
+    "CONSPIRACY": "Заговоры",
+    "HOROSCOPE": "Гороскоп",
+    "JOKE": "Анекдоты",
+    "ROAST": "Roast",
+}
+
+PARAMETER_LABELS = {
+    "MODEL": "модель",
+    "TEMPERATURE": "температура",
+    "TOP_P": "Top P",
+    "TOP_K": "Top K",
+    "PRESENCE_PENALTY": "presence penalty",
+    "FREQUENCY_PENALTY": "frequency penalty",
+    "REPETITION_PENALTY": "repetition penalty",
+    "MIN_P": "Min P",
+    "TOP_A": "Top A",
+    "MAX_TOKENS": "максимум токенов",
+    "TIME": "время отправки",
+    "EVERY_DAYS": "интервал в днях",
+    "CONTEXT_DAYS": "контекст в днях",
+    "CONTEXT_HOURS": "контекст в часах",
+    "PROMPT_PATH": "файл промпта",
 }
 
 PROMPT_FALLBACKS = {
@@ -50,7 +95,7 @@ class AdminField:
 
 GROUPS: dict[str, tuple[str, list[str]]] = {
     "main": (
-        "Основное",
+        "⚙️ Основное",
         [
             "TELEGRAM_BOT_TOKEN",
             "OPENROUTER_API_KEY",
@@ -61,7 +106,7 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
         ],
     ),
     "models": (
-        "Модели",
+        "🧠 Модели",
         [
             "OPENROUTER_DEFAULT_MODEL",
             "OPENROUTER_QUALITY_MODEL",
@@ -75,7 +120,7 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
         ],
     ),
     "sources": (
-        "Источники",
+        "📡 Источники",
         [
             "IMAGE_SOURCE_CHANNELS",
             "ALABUGA_CHANNEL_URL",
@@ -85,7 +130,7 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
         ],
     ),
     "schedule": (
-        "Расписание",
+        "🕒 Расписание",
         [
             "HOROSCOPE_TIME",
             "HOROSCOPE_EVERY_DAYS",
@@ -108,14 +153,14 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
             "TRACKED_WORDS",
         ],
     ),
-    "answer": ("Answer", []),
-    "summary": ("Summary", []),
-    "conspiracy": ("Conspiracy", []),
-    "horoscope": ("Horoscope", []),
-    "joke": ("Joke", []),
-    "roast": ("Roast", []),
+    "answer": ("💬 Ответы", []),
+    "summary": ("📝 Сводка", []),
+    "conspiracy": ("🕵️ Заговоры", []),
+    "horoscope": ("🔮 Гороскоп", []),
+    "joke": ("🎭 Анекдоты", []),
+    "roast": ("🔥 Roast", []),
     "prompts": (
-        "Prompt paths",
+        "📁 Файлы промптов",
         [
             "SYSTEM_PROMPT_PATH",
             "SUMMARY_PROMPT_PATH",
@@ -125,16 +170,28 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
             "ROAST_PROMPT_PATH",
         ],
     ),
-    "prompt_texts": ("Prompt text", list(PROMPT_TEXT_KEYS)),
+    "prompt_texts": ("✍️ Тексты промптов", list(PROMPT_TEXT_KEYS)),
 }
+
+
+def field_label(key: str, fallback: str) -> str:
+    if key in FIELD_LABELS:
+        return FIELD_LABELS[key]
+    for prefix, service_label in SERVICE_LABELS.items():
+        marker = f"{prefix}_"
+        if key.startswith(marker):
+            suffix = key[len(marker):]
+            return f"{service_label} · {PARAMETER_LABELS.get(suffix, fallback)}"
+    return fallback
 
 
 def _build_fields() -> dict[str, AdminField]:
     fields: dict[str, AdminField] = {}
     for key, label, secret in QUESTIONS:
-        fields[key] = AdminField(key, label, secret or key in SECRET_KEYS)
+        fields[key] = AdminField(key, field_label(key, label), secret or key in SECRET_KEYS)
     for key in DEFAULTS:
-        fields.setdefault(key, AdminField(key, key.replace("_", " ").title(), key in SECRET_KEYS))
+        fallback = key.replace("_", " ").title()
+        fields.setdefault(key, AdminField(key, field_label(key, fallback), key in SECRET_KEYS))
     for key, label in PROMPT_TEXT_KEYS.items():
         fields.setdefault(key, AdminField(key, label, False))
     return fields
@@ -197,15 +254,17 @@ def display_value(key: str, value: str) -> str:
 
 def admin_home_text() -> str:
     return (
-        "<b>Admin</b>\n\n"
-        "Choose a section, then a setting. New values are stored in SQLite and applied in runtime.\n"
-        "<code>.env</code> stays as the fallback/bootstrap layer."
+        "<b>⚙️ Панель управления</b>\n\n"
+        "Выбери раздел, затем нужный параметр.\n\n"
+        "<b>Как применяются изменения</b>\n"
+        "Значения сохраняются в SQLite и применяются сразу, без перезапуска. "
+        "Конфигурация из <code>.env</code> используется как резервная."
     )
 
 
 def admin_group_text(group_key: str) -> str:
     title, _ = GROUPS[group_key]
-    return f"<b>{html.escape(title)}</b>\n\nВыбери параметр."
+    return f"<b>{html.escape(title)}</b>\n\nВыбери параметр для просмотра или изменения."
 
 
 def admin_field_text(
@@ -232,20 +291,28 @@ def admin_field_text(
         value = env.get(key, DEFAULTS.get(key, ""))
         source = ".env/default"
     return (
-        f"<b>{html.escape(field.label)}</b>\n"
+        f"<b>⚙️ {html.escape(field.label)}</b>\n"
         f"<code>{html.escape(key)}</code>\n\n"
-        f"Источник: <code>{html.escape(source)}</code>\n"
-        f"Текущее значение:\n<code>{html.escape(display_value(key, value))}</code>\n\n"
-        "Нажми “Изменить”, чтобы отправить новое значение следующим сообщением."
+        f"<b>Источник</b>\n<code>{html.escape(source)}</code>\n\n"
+        f"<b>Текущее значение</b>\n<code>{html.escape(display_value(key, value))}</code>\n\n"
+        "Нажми «Изменить» и отправь новое значение следующим сообщением."
     )
 
 
 def admin_set_prompt_text(key: str) -> str:
     field = FIELDS[key]
+    hint = (
+        "\n\n<b>Формат:</b> Telegram ID через запятую.\n"
+        "Пример: <code>123456789, 987654321</code>"
+        if key == "ADMIN_USER_IDS"
+        else ""
+    )
     return (
-        f"Отправь новое значение для <b>{html.escape(field.label)}</b>.\n"
-        f"Ключ: <code>{html.escape(key)}</code>\n\n"
-        "Чтобы очистить значение, отправь <code>-</code>.\n"
-        "Для многострочного текста можно отправить обычное многострочное сообщение.\n"
-        "Чтобы отменить, отправь <code>/cancel</code>."
+        f"<b>✏️ Изменение параметра</b>\n\n"
+        f"<b>{html.escape(field.label)}</b>\n"
+        f"Ключ: <code>{html.escape(key)}</code>"
+        f"{hint}\n\n"
+        "Отправь новое значение одним сообщением.\n"
+        "Очистить override: <code>-</code>\n"
+        "Отменить изменение: <code>/cancel</code>"
     )

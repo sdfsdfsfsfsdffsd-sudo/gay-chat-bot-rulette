@@ -192,6 +192,11 @@ receive them.
 
 ## Commands
 
+The bot registers its commands with Telegram on startup, so they appear in the
+native `/` command picker. Public and administrator commands are defined in one
+role-aware registry. Users see only public commands; IDs from `ADMIN_USER_IDS`
+receive the full menu in their private chat and in the bound group.
+
 - `/start` - quick health response.
 - `/bind_chat` - prints the current chat id for `.env`.
 - `/runtime_config` - shows effective models and system-prompt hashes from runtime.

@@ -6,6 +6,7 @@ import logging
 from aiogram import Bot, Dispatcher
 
 from bot.config import apply_settings, effective_model_settings, load_settings
+from bot.commands import register_bot_commands
 from bot.handlers import build_router
 from bot.llm import OpenRouterClient
 from bot.prompt_loader import load_prompts
@@ -34,12 +35,16 @@ async def main() -> None:
     prompts = load_prompts(settings, await storage.prompt_overrides())
 
     bot = Bot(settings.telegram_bot_token)
+    await register_bot_commands(bot, settings)
     llm = OpenRouterClient(settings)
     dispatcher = Dispatcher()
     scheduler = build_scheduler(bot, settings, storage, llm, prompts)
 
     def reload_scheduler() -> None:
         configure_scheduler(scheduler, bot, settings, storage, llm, prompts)
+
+    async def reload_command_menu() -> None:
+        await register_bot_commands(bot, settings)
 
     dispatcher.include_router(
         build_router(
@@ -48,6 +53,7 @@ async def main() -> None:
             llm,
             prompts,
             reload_scheduler=reload_scheduler,
+            reload_command_menu=reload_command_menu,
         )
     )
 

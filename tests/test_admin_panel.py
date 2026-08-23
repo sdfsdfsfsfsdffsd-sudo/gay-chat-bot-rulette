@@ -2,7 +2,15 @@ from __future__ import annotations
 
 import unittest
 
-from bot.admin_panel import FIELDS, GROUPS, admin_field_text, admin_home_keyboard, display_value
+from bot.admin_panel import (
+    FIELDS,
+    GROUPS,
+    admin_field_text,
+    admin_home_keyboard,
+    admin_home_text,
+    admin_set_prompt_text,
+    display_value,
+)
 
 
 class AdminPanelTests(unittest.TestCase):
@@ -26,6 +34,11 @@ class AdminPanelTests(unittest.TestCase):
     def test_home_keyboard_has_buttons(self) -> None:
         keyboard = admin_home_keyboard()
         self.assertTrue(keyboard.inline_keyboard)
+
+    def test_admin_interface_has_readable_russian_labels(self) -> None:
+        self.assertEqual(FIELDS["ADMIN_USER_IDS"].label, "Администраторы (Telegram ID через запятую)")
+        self.assertIn("Панель управления", admin_home_text())
+        self.assertIn("123456789, 987654321", admin_set_prompt_text("ADMIN_USER_IDS"))
 
     def test_field_text_contains_key(self) -> None:
         self.assertIn("ANSWER_TEMPERATURE", admin_field_text("ANSWER_TEMPERATURE"))

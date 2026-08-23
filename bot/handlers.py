@@ -4,7 +4,7 @@ import asyncio
 import hashlib
 import random
 import re
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 
 from aiogram import Bot, Router
 from aiogram.filters import Command
@@ -24,6 +24,7 @@ from bot.admin_panel import (
 )
 from bot.answer_pipeline import AnswerExtractionError, generate_clean_answer
 from bot.config import Settings, validate_setting_override
+from bot.commands import commands_text
 from bot.llm import OpenRouterClient
 from bot.prompt_loader import PromptSet
 from bot.runtime_config import sync_runtime_config
@@ -37,25 +38,6 @@ def participants_block(participants: list[str]) -> str:
     if not participants:
         return "Участники: список пуст, сделай общий формат без персональных тегов."
     return "Участники для тегирования:\n" + "\n".join(f"- {participant}" for participant in participants)
-
-
-COMMANDS_TEXT = """<b>Команды бота</b>
-
-/start — проверить, что бот жив
-/commands — показать список команд
-/admin — открыть админку настроек
-/runtime_config — показать фактические runtime-модели и hash system prompt
-/bind_chat — привязать текущий чат для scheduler
-/summary_now — сразу сделать SVOдку за день
-/horoscope_now — сразу сделать персональный гороскоп
-/joke_now — сразу сгенерировать анекдот
-/conspiracy_now — сразу сделать бредовую теорию заговора по контексту
-/roast_now [@user|random] — playful roast участника
-/bully [@user|random] — алиас для /roast_now
-/word_stats_now — показать дневную статистику по отслеживаемым словам
-/alabuga_random — кинуть случайный пост из канала Алабуга Политех
-/alabuga_now — алиас для /alabuga_random
-"""
 
 
 CONTEXT_REQUEST_MARKERS = (
@@ -160,6 +142,7 @@ def build_router(
     prompts: PromptSet,
     *,
     reload_scheduler: Callable[[], None] | None = None,
+    reload_command_menu: Callable[[], Awaitable[None]] | None = None,
 ) -> Router:
     router = Router()
     active_questions: dict[int, asyncio.Lock] = {}
@@ -177,6 +160,8 @@ def build_router(
         await sync_runtime_config(settings, prompts, storage)
         if reload_scheduler is not None:
             reload_scheduler()
+        if reload_command_menu is not None:
+            await reload_command_menu()
 
     async def field_text(key: str) -> str:
         return admin_field_text(
@@ -194,7 +179,10 @@ def build_router(
 
     @router.message(Command("commands"))
     async def commands(message: Message) -> None:
-        await message.answer(COMMANDS_TEXT, parse_mode="HTML")
+        await message.answer(
+            commands_text(is_admin(message)),
+            parse_mode="HTML",
+        )
 
     @router.message(Command("admin"))
     async def admin(message: Message) -> None:
