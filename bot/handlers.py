@@ -34,6 +34,7 @@ from bot.runtime_config import sync_runtime_config
 from bot.sources import fetch_random_telegram_item
 from bot.storage import Storage
 from bot.telegram_format import normalize_telegram_html
+from bot.userbot import forward_post_with_userbot
 from bot.word_stats import build_daily_word_stats
 
 
@@ -499,6 +500,8 @@ def build_router(
                 return
             except Exception as error:
                 logger.warning("Could not forward Telegram post %s/%s: %s", item.channel_username, item.message_id, error)
+            if await forward_post_with_userbot(settings, message.chat.id, item.channel_username, item.message_id):
+                return
         await message.answer(f"Alabuga Polytech:\n\n{item.text[:3400]}\n\n{item.url}")
 
 

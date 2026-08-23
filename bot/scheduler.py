@@ -23,6 +23,7 @@ from bot.sources import (
 )
 from bot.storage import Storage
 from bot.telegram_format import normalize_telegram_html
+from bot.userbot import forward_post_with_userbot
 from bot.word_stats import build_daily_word_stats
 
 
@@ -57,7 +58,7 @@ async def _send_text(bot: Bot, chat_id: int | None, text: str, *, parse_mode: st
         await bot.send_message(chat_id, text[:4000])
 
 
-async def _forward_or_send_feed_item(bot: Bot, chat_id: int | None, item) -> None:
+async def _forward_or_send_feed_item(bot: Bot, settings: Settings, chat_id: int | None, item) -> None:
     if chat_id is None:
         return
     if item.channel_username and item.message_id:
@@ -66,6 +67,8 @@ async def _forward_or_send_feed_item(bot: Bot, chat_id: int | None, item) -> Non
             return
         except Exception as error:
             logger.warning("Could not forward Telegram post %s/%s: %s", item.channel_username, item.message_id, error)
+        if await forward_post_with_userbot(settings, chat_id, item.channel_username, item.message_id):
+            return
     await _send_text(bot, chat_id, f"Alabuga Polytech:\n\n{item.text}\n\n{item.url}")
 
 
@@ -182,7 +185,7 @@ async def send_alabuga_news(bot: Bot, settings: Settings, storage: Storage) -> N
     item = await fetch_latest_unsent_telegram_item(settings.alabuga_channel_url, storage.was_sent)
     if not item:
         return
-    await _forward_or_send_feed_item(bot, settings.bot_chat_id, item)
+    await _forward_or_send_feed_item(bot, settings, settings.bot_chat_id, item)
     await storage.mark_sent(item.key)
 
 

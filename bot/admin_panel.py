@@ -12,7 +12,7 @@ from bot.env_file import read_env
 from setup_cli import DEFAULTS, QUESTIONS
 
 
-SECRET_KEYS = {"TELEGRAM_BOT_TOKEN", "OPENROUTER_API_KEY"}
+SECRET_KEYS = {"TELEGRAM_BOT_TOKEN", "OPENROUTER_API_KEY", "TELEGRAM_USER_API_HASH", "TELEGRAM_USER_SESSION"}
 PROMPT_TEXT_KEYS = {
     "ANSWER_SYSTEM_PROMPT_TEXT": "Ответы · System prompt",
     "SUMMARY_SYSTEM_PROMPT_TEXT": "Сводка · System prompt",
@@ -34,6 +34,9 @@ FIELD_LABELS = {
     "OPENROUTER_API_KEY": "Ключ OpenRouter API",
     "BOT_CHAT_ID": "Привязанный чат (Chat ID)",
     "ADMIN_USER_IDS": "Администраторы (Telegram ID через запятую)",
+    "TELEGRAM_USER_API_ID": "Userbot · Telegram API ID",
+    "TELEGRAM_USER_API_HASH": "Userbot · Telegram API hash",
+    "TELEGRAM_USER_SESSION": "Userbot · StringSession",
     "TARGET_USERNAME": "Участник для автоматического roast",
     "BULLY_TARGET_USERNAME": "Bully · цель по умолчанию",
     "TIMEZONE": "Часовой пояс",
@@ -114,6 +117,9 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
             "OPENROUTER_API_KEY",
             "BOT_CHAT_ID",
             "ADMIN_USER_IDS",
+            "TELEGRAM_USER_API_ID",
+            "TELEGRAM_USER_API_HASH",
+            "TELEGRAM_USER_SESSION",
             "TARGET_USERNAME",
             "BULLY_TARGET_USERNAME",
             "TIMEZONE",

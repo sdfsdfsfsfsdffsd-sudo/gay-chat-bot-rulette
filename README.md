@@ -226,6 +226,33 @@ receive the full menu in their private chat and in the bound group.
 - `/bully_text` - shows or changes the static bully text.
 - `/bully_target` - shows or changes the default bully target.
 - `/alabuga_random` - forwards a random Alabuga Polytech post when Telegram allows it.
+
+## Telegram Forwarding
+
+For Alabuga posts the bot tries three steps:
+
+1. Bot API `forward_message` from the public channel post.
+2. Optional userbot forward through Telethon, if configured.
+3. Text fallback with the post link.
+
+Bot API forwarding can fail when the bot account has no access to the source
+channel or Telegram blocks forwarding. To enable the userbot fallback, create a
+Telegram app at `my.telegram.org`, run:
+
+```bash
+python make_telegram_user_session.py
+```
+
+Then set these values in Railway variables or `/admin`:
+
+```env
+TELEGRAM_USER_API_ID=
+TELEGRAM_USER_API_HASH=
+TELEGRAM_USER_SESSION=
+```
+
+The personal account used for `TELEGRAM_USER_SESSION` must be able to read the
+source channel and must be present in the destination group.
 - `/word_stats_now` - prints daily tracked-word stats immediately.
 
 ## Safety Boundaries

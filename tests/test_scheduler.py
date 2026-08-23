@@ -10,7 +10,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from bot.handlers import build_roast_prompt
-from bot.scheduler import configure_scheduler, maybe_send_roast, periodic_day_trigger, send_joke
+from bot.scheduler import _forward_or_send_feed_item, configure_scheduler, maybe_send_roast, periodic_day_trigger, send_joke
 
 
 class RecordingScheduler:
@@ -175,6 +175,47 @@ class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
             await maybe_send_roast(bot := Bot(), settings, object(), object(), object())
 
         self.assertEqual(bot.sent, (123, "@configured", "HTML"))
+
+    async def test_feed_forward_falls_back_to_userbot_after_bot_api_failure(self) -> None:
+        class Bot:
+            async def forward_message(self, *args, **kwargs):
+                raise RuntimeError("bot api cannot access source")
+
+            async def send_message(self, *args, **kwargs):
+                raise AssertionError("Text fallback should not run when userbot succeeds")
+
+        item = SimpleNamespace(
+            channel_username="alabugapolytech",
+            message_id=123,
+            text="post",
+            url="https://t.me/alabugapolytech/123",
+        )
+
+        with patch("bot.scheduler.forward_post_with_userbot", new=AsyncMock(return_value=True)) as userbot_forward:
+            await _forward_or_send_feed_item(Bot(), SimpleNamespace(), -1001, item)
+
+        userbot_forward.assert_awaited_once()
+
+    async def test_feed_forward_uses_text_fallback_when_forwards_fail(self) -> None:
+        class Bot:
+            async def forward_message(self, *args, **kwargs):
+                raise RuntimeError("bot api cannot access source")
+
+            async def send_message(self, chat_id, text, parse_mode=None):
+                self.sent = (chat_id, text, parse_mode)
+
+        bot = Bot()
+        item = SimpleNamespace(
+            channel_username="alabugapolytech",
+            message_id=123,
+            text="post",
+            url="https://t.me/alabugapolytech/123",
+        )
+
+        with patch("bot.scheduler.forward_post_with_userbot", new=AsyncMock(return_value=False)):
+            await _forward_or_send_feed_item(bot, SimpleNamespace(), -1001, item)
+
+        self.assertEqual(bot.sent, (-1001, "Alabuga Polytech:\n\npost\n\nhttps://t.me/alabugapolytech/123", None))
 
 
 if __name__ == "__main__":
