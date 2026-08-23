@@ -16,7 +16,6 @@ MODEL_SETTING_FIELDS = {
     "CONSPIRACY_MODEL": "conspiracy_model",
     "HOROSCOPE_MODEL": "horoscope_model",
     "JOKE_MODEL": "joke_model",
-    "ROAST_MODEL": "roast_model",
 }
 
 DECIMAL_DAY_SETTING_KEYS = {
@@ -36,7 +35,6 @@ POSITIVE_INTEGER_SETTING_KEYS = {
     "SUMMARY_CONTEXT_HOURS",
     "HOROSCOPE_CONTEXT_DAYS",
     "CONSPIRACY_CONTEXT_DAYS",
-    "ROAST_CONTEXT_DAYS",
 }
 TIME_SETTING_KEYS = {
     "HOROSCOPE_TIME",
@@ -46,6 +44,9 @@ TIME_SETTING_KEYS = {
     "JOKE_A_TIME",
     "JOKE_B_TIME",
     "CONSPIRACY_TIME",
+}
+BOOLEAN_SETTING_KEYS = {
+    "ANSWER_WEB_SEARCH_ENABLED",
 }
 
 
@@ -90,7 +91,7 @@ class Settings:
     conspiracy_model: str
     horoscope_model: str
     joke_model: str
-    roast_model: str
+    answer_web_search_enabled: bool
     bot_chat_id: int | None
     admin_user_ids: set[int]
     telegram_user_api_id: int | None
@@ -120,7 +121,6 @@ class Settings:
     summary_context_hours: int
     horoscope_context_days: int
     conspiracy_context_days: int
-    roast_context_days: int
     tracked_words: list[str]
     random_image_every_minutes: int
     random_image_probability: float
@@ -133,7 +133,6 @@ class Settings:
     conspiracy_params: GenerationParams
     horoscope_params: GenerationParams
     joke_params: GenerationParams
-    roast_params: GenerationParams
     system_prompt_path: Path | None
     horoscope_prompt_path: Path | None
     joke_prompt_path: Path | None
@@ -141,7 +140,6 @@ class Settings:
     joke_b_prompt_path: Path | None
     summary_prompt_path: Path | None
     conspiracy_prompt_path: Path | None
-    roast_prompt_path: Path | None
 
     @property
     def has_bound_chat(self) -> bool:
@@ -213,6 +211,12 @@ def _float_value(value: str | None, default: float) -> float:
     return parsed if parsed is not None else default
 
 
+def _bool_value(value: str | None, default: bool = False) -> bool:
+    if value is None or not value.strip():
+        return default
+    return value.strip().lower() in {"1", "true", "yes", "y", "on", "да"}
+
+
 def validate_setting_override(key: str, value: str) -> None:
     if key in DECIMAL_DAY_SETTING_KEYS:
         number = float(value)
@@ -231,6 +235,9 @@ def validate_setting_override(key: str, value: str) -> None:
         hour, minute = map(int, parts)
         if not 0 <= hour <= 23 or not 0 <= minute <= 59:
             raise ValueError("Время должно быть в диапазоне 00:00–23:59.")
+    elif key in BOOLEAN_SETTING_KEYS:
+        if value.strip().lower() not in {"1", "0", "true", "false", "yes", "no", "y", "n", "on", "off", "да", "нет"}:
+            raise ValueError("Значение должно быть boolean: true/false, yes/no или 1/0.")
 
 
 def _time_value(value: str | None, default: str) -> str:
@@ -297,7 +304,6 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
     conspiracy_model = _model_value(get("CONSPIRACY_MODEL", ""), quality_model)
     horoscope_model = _model_value(get("HOROSCOPE_MODEL", ""), summary_model)
     joke_model = _model_value(get("JOKE_MODEL", ""), default_model)
-    roast_model = _model_value(get("ROAST_MODEL", ""), default_model)
 
     return Settings(
         telegram_bot_token=token,
@@ -310,7 +316,7 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         conspiracy_model=conspiracy_model,
         horoscope_model=horoscope_model,
         joke_model=joke_model,
-        roast_model=roast_model,
+        answer_web_search_enabled=_bool_value(get("ANSWER_WEB_SEARCH_ENABLED", "true"), True),
         bot_chat_id=_optional_int(get("BOT_CHAT_ID", "")),
         admin_user_ids=_ints(get("ADMIN_USER_IDS", "")),
         telegram_user_api_id=_optional_int(get("TELEGRAM_USER_API_ID", "")),
@@ -340,7 +346,6 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         summary_context_hours=_int_value(get("SUMMARY_CONTEXT_HOURS", "24"), 24),
         horoscope_context_days=_int_value(get("HOROSCOPE_CONTEXT_DAYS", "7"), 7),
         conspiracy_context_days=_int_value(get("CONSPIRACY_CONTEXT_DAYS", "3"), 3),
-        roast_context_days=_int_value(get("ROAST_CONTEXT_DAYS", "3"), 3),
         tracked_words=_csv(get("TRACKED_WORDS", "")),
         random_image_every_minutes=_int_value(get("RANDOM_IMAGE_EVERY_MINUTES", "180"), 180),
         random_image_probability=_float_value(get("RANDOM_IMAGE_PROBABILITY", "0.35"), 0.35),
@@ -362,7 +367,6 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         ),
         horoscope_params=_generation_params("HOROSCOPE", 1.0, get),
         joke_params=_generation_params("JOKE", 1.0, get),
-        roast_params=_generation_params("ROAST", 1.0, get),
         system_prompt_path=_optional_path(get("SYSTEM_PROMPT_PATH", "prompts/system.txt")),
         horoscope_prompt_path=_optional_path(get("HOROSCOPE_PROMPT_PATH", "prompts/horoscope.txt")),
         joke_prompt_path=_optional_path(get("JOKE_PROMPT_PATH", "prompts/joke.txt")),
@@ -370,7 +374,6 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         joke_b_prompt_path=_optional_path(get("JOKE_B_PROMPT_PATH", "prompts/joke_b.txt")),
         summary_prompt_path=_optional_path(get("SUMMARY_PROMPT_PATH", "prompts/summary.txt")),
         conspiracy_prompt_path=_optional_path(get("CONSPIRACY_PROMPT_PATH", "prompts/conspiracy.txt")),
-        roast_prompt_path=_optional_path(get("ROAST_PROMPT_PATH", "prompts/roast.txt")),
     )
 
 

@@ -11,6 +11,7 @@ from bot.answer_pipeline import (
 from bot.config import GenerationParams
 from bot.handlers import (
     build_answer_prompt,
+    build_short_reply_answer_prompt,
     build_runtime_config_text,
     clean_question_text,
     command_argument,
@@ -81,7 +82,7 @@ class AnswerPipelineTests(unittest.TestCase):
             conspiracy_model="new/conspiracy-model",
             horoscope_model="horoscope/model",
             joke_model="joke/model",
-            roast_model="roast/model",
+            answer_web_search_enabled=True,
             **{
                 f"{service}_params": SimpleNamespace(
                     temperature=0.85,
@@ -92,7 +93,7 @@ class AnswerPipelineTests(unittest.TestCase):
                     repetition_penalty=None,
                     max_tokens=900,
                 )
-                for service in ("answer", "summary", "conspiracy", "horoscope", "joke", "roast")
+                for service in ("answer", "summary", "conspiracy", "horoscope", "joke")
             },
         )
         prompts = SimpleNamespace(
@@ -101,7 +102,6 @@ class AnswerPipelineTests(unittest.TestCase):
             conspiracy_system="new conspiracy system prompt",
             horoscope_system="",
             joke_system="",
-            roast_system="",
         )
 
         text = build_runtime_config_text(settings, prompts)
@@ -110,6 +110,13 @@ class AnswerPipelineTests(unittest.TestCase):
         self.assertIn("system_sha256=4e9f857599c9", text)
         self.assertIn("system_chars=28", text)
         self.assertIn("temperature=0.85", text)
+        self.assertIn("answer_web_search_enabled=True", text)
+
+    def test_short_reply_prompt_is_short_answer_instruction(self) -> None:
+        text = build_short_reply_answer_prompt("Ну и?")
+
+        self.assertIn("одним коротким предложением", text)
+        self.assertIn("Ну и?", text)
 
 
 class AnswerPipelineAsyncTests(unittest.IsolatedAsyncioTestCase):
@@ -123,6 +130,7 @@ class AnswerPipelineAsyncTests(unittest.IsolatedAsyncioTestCase):
             system_prompt="answer system",
             model=ANSWER_MODEL,
             params=self.params,
+            web_search=True,
         )
         self.assertEqual(answer, "Direct answer.")
         self.assertEqual(len(llm.calls), 1)
@@ -136,6 +144,7 @@ class AnswerPipelineAsyncTests(unittest.IsolatedAsyncioTestCase):
         self.assertIsNone(llm.calls[0][1]["params"].min_p)
         self.assertIsNone(llm.calls[0][1]["params"].top_a)
         self.assertEqual(llm.calls[0][1]["params"].max_tokens, 1800)
+        self.assertTrue(llm.calls[0][1]["web_search"])
 
     async def test_roleplay_answer_is_rejected(self) -> None:
         llm = FakeLlm("Khan: Final answer.")

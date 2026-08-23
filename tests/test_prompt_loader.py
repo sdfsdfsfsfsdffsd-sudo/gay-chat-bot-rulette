@@ -17,7 +17,6 @@ def settings_stub(**overrides):
         "joke_b_prompt_path": None,
         "summary_prompt_path": None,
         "conspiracy_prompt_path": None,
-        "roast_prompt_path": None,
     }
     values.update(overrides)
     return SimpleNamespace(**values)

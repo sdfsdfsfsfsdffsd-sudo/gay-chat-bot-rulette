@@ -28,6 +28,7 @@ from bot.answer_pipeline import AnswerExtractionError, generate_clean_answer
 from bot.bully import render_bully_message
 from bot.config import Settings, validate_setting_override
 from bot.commands import commands_text
+from bot.horoscope import split_horoscope_by_participant
 from bot.llm import OpenRouterClient
 from bot.prompt_loader import PromptSet
 from bot.runtime_config import sync_runtime_config
@@ -78,6 +79,14 @@ def build_answer_prompt(question: str, context: str | None = None) -> str:
     return question
 
 
+def build_short_reply_answer_prompt(question: str) -> str:
+    return (
+        "Ответь одним коротким предложением: дерзко, жестко и по делу. "
+        "Без рассуждений, без списков, без ролей.\n\n"
+        f"{question}"
+    )
+
+
 def command_argument(text: str | None) -> str:
     if not text:
         return ""
@@ -93,7 +102,8 @@ def build_runtime_config_text(settings: Settings, prompts: PromptSet) -> str:
         f"userbot={'configured' if userbot_is_configured(settings) else 'missing'} | "
         f"missing={','.join(missing_forward_fields) if missing_forward_fields else 'none'}"
     )
-    for service in ("answer", "summary", "conspiracy", "horoscope", "joke", "roast"):
+    rows.append(f"answer_web_search_enabled={getattr(settings, 'answer_web_search_enabled', True)}")
+    for service in ("answer", "summary", "conspiracy", "horoscope", "joke"):
         model = getattr(settings, f"{service}_model")
         system_prompt = getattr(prompts, f"{service}_system").strip()
         fingerprint = (
@@ -123,29 +133,6 @@ def format_roast_target(value: str) -> str:
     if re.fullmatch(r"[A-Za-z0-9_]{5,}", value):
         return f"@{value}"
     return value
-
-
-async def build_roast_prompt(
-    storage: Storage,
-    chat_id: int,
-    prompts: PromptSet,
-    target: str,
-    context_days: int,
-) -> str:
-    context_hours = context_days * 24
-    target_messages = await storage.recent_messages_by_participant(chat_id, target, hours=context_hours, limit=80)
-    general_context = await storage.recent_messages(chat_id, hours=context_hours, limit=120)
-    target_block = "\n".join(target_messages) if target_messages else "Сообщений именно этого участника за период не найдено."
-    general_block = "\n".join(general_context[-120:]) if general_context else "Общий контекст пуст."
-    return (
-        prompts.roast.format(target=target, username=target.lstrip("@"))
-        + "\n\nЦель roast:\n"
-        + target
-        + "\n\nСообщения цели за последнее время:\n"
-        + target_block
-        + f"\n\nОбщий контекст чата за {context_days} дн.:\n"
-        + general_block
-    )
 
 
 def build_router(
@@ -372,10 +359,12 @@ def build_router(
             params=settings.horoscope_params,
             max_tokens=1400,
         )
-        try:
-            await message.answer(text[:4000], parse_mode="HTML")
-        except Exception:
-            await message.answer(text[:4000])
+        for message_text in split_horoscope_by_participant(text, participants):
+            try:
+                await message.answer(message_text[:4000], parse_mode="HTML")
+            except Exception:
+                await message.answer(message_text[:4000])
+
 
     @router.message(Command("joke_now"))
     async def joke_now(message: Message) -> None:
@@ -557,7 +546,7 @@ def build_router(
         async with lock:
             processing_message = await message.reply("Ищу ответ на вопрос...")
             try:
-                text = await generate_answer(message, me.username, settings, storage, llm)
+                text = await generate_answer(message, me.username, settings, storage, llm, short_reply=replied_to_bot)
                 try:
                     await message.reply(normalize_telegram_html(text)[:4000], parse_mode="HTML")
                 except Exception:
@@ -578,20 +567,32 @@ def build_router(
         settings: Settings,
         storage: Storage,
         llm: OpenRouterClient,
+        *,
+        short_reply: bool = False,
     ) -> str:
         await sync_runtime_config(settings, prompts, storage)
         question = clean_question_text(message.text or "", bot_username)
-        if wants_chat_context(message.text):
+        if short_reply:
+            prompt = build_short_reply_answer_prompt(question)
+            max_tokens = 120
+            web_search = False
+        elif wants_chat_context(message.text):
             context = "\n".join(await storage.recent_messages(message.chat.id, hours=6, limit=80))
             prompt = build_answer_prompt(question, context)
+            max_tokens = None
+            web_search = False
         else:
             prompt = build_answer_prompt(question)
+            max_tokens = None
+            web_search = settings.answer_web_search_enabled
         text = await generate_clean_answer(
             llm,
             prompt,
             system_prompt=prompts.answer_system,
             model=settings.answer_model,
             params=settings.answer_params,
+            max_tokens=max_tokens,
+            web_search=web_search,
         )
         return text
 

@@ -79,6 +79,21 @@ class LlmPayloadTests(unittest.IsolatedAsyncioTestCase):
             ],
         )
 
+    async def test_web_search_plugin_is_sent_only_when_enabled(self) -> None:
+        settings = SimpleNamespace(
+            openrouter_api_key="test",
+            openrouter_default_model="fallback/model",
+        )
+        llm = OpenRouterClient(settings)
+        fake_client = FakeHttpClient()
+        llm._client = fake_client
+
+        await llm.generate("latest question", web_search=True)
+
+        payload = fake_client.payload
+        assert payload is not None
+        self.assertEqual(payload["plugins"], [{"id": "web", "max_results": 3}])
+
 
 if __name__ == "__main__":
     unittest.main()

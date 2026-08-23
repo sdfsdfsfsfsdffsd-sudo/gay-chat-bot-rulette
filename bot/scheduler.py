@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 
 from bot.bully import render_bully_message
 from bot.config import Settings
+from bot.horoscope import split_horoscope_by_participant
 from bot.llm import OpenRouterClient
 from bot.prompt_loader import PromptSet
 from bot.runtime_config import sync_runtime_config
@@ -92,7 +93,8 @@ async def send_horoscope(bot: Bot, settings: Settings, storage: Storage, llm: Op
         params=settings.horoscope_params,
         max_tokens=1400,
     )
-    await _send_text(bot, settings.bot_chat_id, text, parse_mode="HTML")
+    for message_text in split_horoscope_by_participant(text, participants):
+        await _send_text(bot, settings.bot_chat_id, message_text, parse_mode="HTML")
 
 
 async def send_summary(bot: Bot, settings: Settings, storage: Storage, llm: OpenRouterClient, prompts: PromptSet) -> None:

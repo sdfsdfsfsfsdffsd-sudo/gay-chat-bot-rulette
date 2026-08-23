@@ -46,6 +46,7 @@ class OpenRouterClient:
         max_tokens: int | None = None,
         response_format: dict[str, Any] | None = None,
         require_supported_parameters: bool = False,
+        web_search: bool = False,
     ) -> str:
         messages = []
         if system_prompt is not None and system_prompt.strip():
@@ -76,6 +77,8 @@ class OpenRouterClient:
             payload["response_format"] = response_format
         if require_supported_parameters:
             payload["provider"] = {"require_parameters": True}
+        if web_search:
+            payload["plugins"] = [{"id": "web", "max_results": 3}]
         if hasattr(self._client, "headers"):
             self._client.headers["Authorization"] = f"Bearer {self.settings.openrouter_api_key}"
         system_hash = (
@@ -86,7 +89,7 @@ class OpenRouterClient:
         logger.info(
             "OpenRouter request: model=%s system_prompt_sha256=%s system_prompt_chars=%d "
             "temperature=%s top_p=%s top_k=%s presence_penalty=%s frequency_penalty=%s "
-            "repetition_penalty=%s max_tokens=%s",
+            "repetition_penalty=%s max_tokens=%s web_search=%s",
             payload["model"],
             system_hash,
             len(system_prompt.strip()) if system_prompt else 0,
@@ -97,6 +100,7 @@ class OpenRouterClient:
             payload.get("frequency_penalty"),
             payload.get("repetition_penalty"),
             payload.get("max_tokens"),
+            bool(payload.get("plugins")),
         )
         response = await self._client.post("/chat/completions", json=payload)
         response.raise_for_status()
@@ -119,6 +123,7 @@ class OpenRouterClient:
         max_tokens: int | None = None,
         response_format: dict[str, Any] | None = None,
         require_supported_parameters: bool = False,
+        web_search: bool = False,
     ) -> str:
         return await self.generate(
             user_prompt,
@@ -135,4 +140,5 @@ class OpenRouterClient:
             max_tokens=max_tokens if max_tokens is not None else params.max_tokens,
             response_format=response_format,
             require_supported_parameters=require_supported_parameters,
+            web_search=web_search,
         )

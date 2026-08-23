@@ -9,7 +9,6 @@ from zoneinfo import ZoneInfo
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
-from bot.handlers import build_roast_prompt
 from bot.scheduler import _forward_or_send_feed_item, configure_scheduler, maybe_send_roast, periodic_day_trigger, send_joke
 
 
@@ -72,30 +71,6 @@ class SchedulerTests(unittest.TestCase):
 
 
 class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
-    async def test_roast_uses_configured_window_for_target_and_chat(self) -> None:
-        calls: list[tuple[str, int]] = []
-
-        class Storage:
-            async def recent_messages_by_participant(self, chat_id, target, *, hours, limit):
-                calls.append(("target", hours))
-                return ["max: target message"]
-
-            async def recent_messages(self, chat_id, *, hours, limit):
-                calls.append(("chat", hours))
-                return ["other: context"]
-
-        prompt = await build_roast_prompt(
-            Storage(),
-            1,
-            SimpleNamespace(roast="Roast {target}"),
-            "@max",
-            3,
-        )
-
-        self.assertEqual(calls, [("target", 72), ("chat", 72)])
-        self.assertIn("max: target message", prompt)
-        self.assertIn("other: context", prompt)
-
     async def test_scheduled_joke_does_not_call_llm_without_bound_chat(self) -> None:
         class Llm:
             async def generate_with_params(self, *args, **kwargs):

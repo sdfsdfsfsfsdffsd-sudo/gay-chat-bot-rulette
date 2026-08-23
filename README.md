@@ -46,7 +46,7 @@ SUMMARY_MODEL=deepseek/deepseek-chat
 CONSPIRACY_MODEL=deepseek/deepseek-chat
 HOROSCOPE_MODEL=
 JOKE_MODEL=cognitivecomputations/dolphin-mistral-24b-venice-edition
-ROAST_MODEL=cognitivecomputations/dolphin-mistral-24b-venice-edition
+ANSWER_WEB_SEARCH_ENABLED=true
 ```
 
 Per-feature model ids are shown in `/admin` and can be changed without restart.
@@ -80,11 +80,11 @@ Context windows are independent from posting frequency:
 SUMMARY_CONTEXT_HOURS=24
 HOROSCOPE_CONTEXT_DAYS=7
 CONSPIRACY_CONTEXT_DAYS=3
-ROAST_CONTEXT_DAYS=3
 ```
 
-`ROAST_CONTEXT_DAYS` applies both to the selected participant's messages and
-to the surrounding group-chat context.
+`ANSWER_WEB_SEARCH_ENABLED` enables OpenRouter web search only for normal
+mention/private questions. Reply-to-bot short answers and chat-context answers
+do not use web search.
 
 ## Prompts
 
@@ -100,7 +100,6 @@ HOROSCOPE_PROMPT_PATH=prompts/horoscope.txt
 JOKE_PROMPT_PATH=prompts/joke.txt
 JOKE_A_PROMPT_PATH=prompts/joke.txt
 JOKE_B_PROMPT_PATH=prompts/joke_b.txt
-ROAST_PROMPT_PATH=prompts/roast.txt
 ```
 
 The Telegram admin panel can also write direct prompt overrides into the bot database.
@@ -112,8 +111,8 @@ fallback for type A.
 System prompts are configured independently per service in `/admin`:
 `ANSWER_SYSTEM_PROMPT_TEXT`, `SUMMARY_SYSTEM_PROMPT_TEXT`,
 `CONSPIRACY_SYSTEM_PROMPT_TEXT`, `HOROSCOPE_SYSTEM_PROMPT_TEXT`,
-`JOKE_SYSTEM_PROMPT_TEXT`, and `ROAST_SYSTEM_PROMPT_TEXT`. They are stored in
-SQLite and applied immediately without changing `.env` or restarting the bot.
+and `JOKE_SYSTEM_PROMPT_TEXT`. They are stored in SQLite and applied
+immediately without changing `.env` or restarting the bot.
 
 `/bully` does not call the LLM. It uses `BULLY_MESSAGE_TEXT` from `/admin`
 or `.env`; the template supports `{target}` and `{username}`. The default
@@ -148,7 +147,6 @@ CONSPIRACY_PRESENCE_PENALTY=0
 CONSPIRACY_FREQUENCY_PENALTY=0.05
 HOROSCOPE_TEMPERATURE=1.0
 JOKE_TEMPERATURE=1.0
-ROAST_TEMPERATURE=1.0
 ```
 
 Admin prompt overrides are applied at runtime. Prompt file path changes from

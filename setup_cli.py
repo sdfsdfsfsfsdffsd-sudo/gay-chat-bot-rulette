@@ -23,7 +23,7 @@ QUESTIONS = [
     ("CONSPIRACY_MODEL", "Conspiracy model id", False),
     ("HOROSCOPE_MODEL", "Horoscope model id", False),
     ("JOKE_MODEL", "Joke model id", False),
-    ("ROAST_MODEL", "Roast model id", False),
+    ("ANSWER_WEB_SEARCH_ENABLED", "Enable OpenRouter web search for mention questions", False),
     ("IMAGE_SOURCE_CHANNELS", "Image source public channels or t.me/s URLs, comma-separated", False),
     ("ALABUGA_CHANNEL_URL", "Alabuga Polytech public channel URL", False),
     ("ALABUGA_JOBS_URL", "Alabuga jobs URL/source, optional", False),
@@ -45,7 +45,6 @@ QUESTIONS = [
     ("SUMMARY_CONTEXT_HOURS", "Summary context window in hours", False),
     ("HOROSCOPE_CONTEXT_DAYS", "Horoscope context window in days", False),
     ("CONSPIRACY_CONTEXT_DAYS", "Conspiracy context window in days", False),
-    ("ROAST_CONTEXT_DAYS", "Roast context window in days", False),
     ("BULLY_MESSAGE_TEXT", "Static bully message text; supports {target} and {username}", False),
     ("ANSWER_TEMPERATURE", "Answer temperature", False),
     ("ANSWER_TOP_P", "Answer top_p, optional", False),
@@ -72,10 +71,6 @@ QUESTIONS = [
     ("JOKE_TOP_P", "Joke top_p, optional", False),
     ("JOKE_PRESENCE_PENALTY", "Joke presence penalty, optional", False),
     ("JOKE_FREQUENCY_PENALTY", "Joke frequency penalty, optional", False),
-    ("ROAST_TEMPERATURE", "Roast temperature", False),
-    ("ROAST_TOP_P", "Roast top_p, optional", False),
-    ("ROAST_PRESENCE_PENALTY", "Roast presence penalty, optional", False),
-    ("ROAST_FREQUENCY_PENALTY", "Roast frequency penalty, optional", False),
     ("SYSTEM_PROMPT_PATH", "System prompt file path", False),
     ("SUMMARY_PROMPT_PATH", "Summary prompt file path", False),
     ("CONSPIRACY_PROMPT_PATH", "Conspiracy prompt file path", False),
@@ -83,7 +78,6 @@ QUESTIONS = [
     ("JOKE_PROMPT_PATH", "Joke prompt file path", False),
     ("JOKE_A_PROMPT_PATH", "Joke A prompt file path", False),
     ("JOKE_B_PROMPT_PATH", "Joke B prompt file path", False),
-    ("ROAST_PROMPT_PATH", "Roast prompt file path", False),
     ("TIMEZONE", "Timezone", False),
 ]
 
@@ -100,7 +94,7 @@ DEFAULTS = {
     "CONSPIRACY_MODEL": "deepseek/deepseek-chat",
     "HOROSCOPE_MODEL": "",
     "JOKE_MODEL": "cognitivecomputations/dolphin-mistral-24b-venice-edition",
-    "ROAST_MODEL": "cognitivecomputations/dolphin-mistral-24b-venice-edition",
+    "ANSWER_WEB_SEARCH_ENABLED": "true",
     "BULLY_TARGET_USERNAME": "",
     "DATABASE_PATH": "data/bot.sqlite3",
     "LOCAL_IMAGE_DIR": "data/images",
@@ -121,7 +115,6 @@ DEFAULTS = {
     "SUMMARY_CONTEXT_HOURS": "24",
     "HOROSCOPE_CONTEXT_DAYS": "7",
     "CONSPIRACY_CONTEXT_DAYS": "3",
-    "ROAST_CONTEXT_DAYS": "3",
     "TRACKED_WORDS": "",
     "TIMEZONE": "Europe/Warsaw",
     "RANDOM_IMAGE_EVERY_MINUTES": "180",
@@ -155,10 +148,6 @@ DEFAULTS = {
     "JOKE_TOP_P": "",
     "JOKE_PRESENCE_PENALTY": "",
     "JOKE_FREQUENCY_PENALTY": "",
-    "ROAST_TEMPERATURE": "1.0",
-    "ROAST_TOP_P": "",
-    "ROAST_PRESENCE_PENALTY": "",
-    "ROAST_FREQUENCY_PENALTY": "",
     "SYSTEM_PROMPT_PATH": "prompts/system.txt",
     "SUMMARY_PROMPT_PATH": "prompts/summary.txt",
     "CONSPIRACY_PROMPT_PATH": "prompts/conspiracy.txt",
@@ -166,7 +155,6 @@ DEFAULTS = {
     "JOKE_PROMPT_PATH": "prompts/joke.txt",
     "JOKE_A_PROMPT_PATH": "prompts/joke.txt",
     "JOKE_B_PROMPT_PATH": "prompts/joke_b.txt",
-    "ROAST_PROMPT_PATH": "prompts/roast.txt",
 }
 
 
@@ -178,7 +166,6 @@ DEFAULT_PROMPT_TEXTS = {
     "JOKE_PROMPT_PATH": default_prompts.JOKE_PROMPT,
     "JOKE_A_PROMPT_PATH": default_prompts.JOKE_PROMPT,
     "JOKE_B_PROMPT_PATH": default_prompts.JOKE_B_PROMPT,
-    "ROAST_PROMPT_PATH": default_prompts.ROAST_PROMPT,
 }
 
 
@@ -206,7 +193,7 @@ def write_env(values: dict[str, str]) -> None:
         "CONSPIRACY_MODEL",
         "HOROSCOPE_MODEL",
         "JOKE_MODEL",
-        "ROAST_MODEL",
+        "ANSWER_WEB_SEARCH_ENABLED",
         "BOT_CHAT_ID",
         "ADMIN_USER_IDS",
         "TELEGRAM_USER_API_ID",
@@ -243,7 +230,6 @@ def write_env(values: dict[str, str]) -> None:
         "SUMMARY_CONTEXT_HOURS",
         "HOROSCOPE_CONTEXT_DAYS",
         "CONSPIRACY_CONTEXT_DAYS",
-        "ROAST_CONTEXT_DAYS",
         "ANSWER_TEMPERATURE",
         "ANSWER_TOP_P",
         "ANSWER_TOP_K",
@@ -269,10 +255,6 @@ def write_env(values: dict[str, str]) -> None:
         "JOKE_TOP_P",
         "JOKE_PRESENCE_PENALTY",
         "JOKE_FREQUENCY_PENALTY",
-        "ROAST_TEMPERATURE",
-        "ROAST_TOP_P",
-        "ROAST_PRESENCE_PENALTY",
-        "ROAST_FREQUENCY_PENALTY",
         "SYSTEM_PROMPT_PATH",
         "SUMMARY_PROMPT_PATH",
         "CONSPIRACY_PROMPT_PATH",
@@ -280,7 +262,6 @@ def write_env(values: dict[str, str]) -> None:
         "JOKE_PROMPT_PATH",
         "JOKE_A_PROMPT_PATH",
         "JOKE_B_PROMPT_PATH",
-        "ROAST_PROMPT_PATH",
     ]
     lines = [f"{key}={values.get(key, '')}" for key in ordered_keys]
     ENV_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")

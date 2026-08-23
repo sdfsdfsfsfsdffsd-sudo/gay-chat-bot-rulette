@@ -19,14 +19,12 @@ PROMPT_TEXT_KEYS = {
     "CONSPIRACY_SYSTEM_PROMPT_TEXT": "Заговоры · System prompt",
     "HOROSCOPE_SYSTEM_PROMPT_TEXT": "Гороскоп · System prompt",
     "JOKE_SYSTEM_PROMPT_TEXT": "Анекдоты · System prompt",
-    "ROAST_SYSTEM_PROMPT_TEXT": "Roast · System prompt",
     "SUMMARY_PROMPT_TEXT": "Сводка · Основной промпт",
     "CONSPIRACY_PROMPT_TEXT": "Заговоры · Основной промпт",
     "HOROSCOPE_PROMPT_TEXT": "Гороскоп · Основной промпт",
     "JOKE_PROMPT_TEXT": "Анекдоты · Основной промпт",
     "JOKE_A_PROMPT_TEXT": "Joke A · Основной промпт",
     "JOKE_B_PROMPT_TEXT": "Joke B · Основной промпт",
-    "ROAST_PROMPT_TEXT": "Roast · Основной промпт",
 }
 
 FIELD_LABELS = {
@@ -49,6 +47,7 @@ FIELD_LABELS = {
     "LOCAL_IMAGE_DIR": "Каталог локальных изображений",
     "DATABASE_PATH": "Путь к SQLite",
     "TRACKED_WORDS": "Отслеживаемые слова",
+    "ANSWER_WEB_SEARCH_ENABLED": "Ответы · поиск в интернете",
     "JOKE_A_TIME": "Joke A · время отправки",
     "JOKE_A_EVERY_DAYS": "Joke A · интервал в днях",
     "JOKE_B_TIME": "Joke B · время отправки",
@@ -64,7 +63,6 @@ SERVICE_LABELS = {
     "CONSPIRACY": "Заговоры",
     "HOROSCOPE": "Гороскоп",
     "JOKE": "Анекдоты",
-    "ROAST": "Roast",
 }
 
 PARAMETER_LABELS = {
@@ -91,14 +89,12 @@ PROMPT_FALLBACKS = {
     "CONSPIRACY_SYSTEM_PROMPT_TEXT": (None, ""),
     "HOROSCOPE_SYSTEM_PROMPT_TEXT": (None, ""),
     "JOKE_SYSTEM_PROMPT_TEXT": (None, ""),
-    "ROAST_SYSTEM_PROMPT_TEXT": (None, ""),
     "SUMMARY_PROMPT_TEXT": ("SUMMARY_PROMPT_PATH", default_prompts.SUMMARY_PROMPT),
     "CONSPIRACY_PROMPT_TEXT": ("CONSPIRACY_PROMPT_PATH", default_prompts.CONSPIRACY_PROMPT),
     "HOROSCOPE_PROMPT_TEXT": ("HOROSCOPE_PROMPT_PATH", default_prompts.HOROSCOPE_PROMPT),
     "JOKE_PROMPT_TEXT": ("JOKE_PROMPT_PATH", default_prompts.JOKE_PROMPT),
     "JOKE_A_PROMPT_TEXT": ("JOKE_A_PROMPT_PATH", default_prompts.JOKE_PROMPT),
     "JOKE_B_PROMPT_TEXT": ("JOKE_B_PROMPT_PATH", default_prompts.JOKE_B_PROMPT),
-    "ROAST_PROMPT_TEXT": ("ROAST_PROMPT_PATH", default_prompts.ROAST_PROMPT),
 }
 
 
@@ -136,7 +132,6 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
             "CONSPIRACY_MODEL",
             "HOROSCOPE_MODEL",
             "JOKE_MODEL",
-            "ROAST_MODEL",
         ],
     ),
     "sources": (
@@ -169,7 +164,6 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
             "SUMMARY_CONTEXT_HOURS",
             "HOROSCOPE_CONTEXT_DAYS",
             "CONSPIRACY_CONTEXT_DAYS",
-            "ROAST_CONTEXT_DAYS",
             "RANDOM_IMAGE_EVERY_MINUTES",
             "RANDOM_IMAGE_PROBABILITY",
             "ROAST_EVERY_MINUTES",
@@ -183,7 +177,6 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
     "conspiracy": ("🕵️ Заговоры", []),
     "horoscope": ("🔮 Гороскоп", []),
     "joke": ("🎭 Анекдоты", []),
-    "roast": ("🔥 Roast", []),
     "prompts": (
         "📁 Файлы промптов",
         [
@@ -194,7 +187,6 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
             "JOKE_PROMPT_PATH",
             "JOKE_A_PROMPT_PATH",
             "JOKE_B_PROMPT_PATH",
-            "ROAST_PROMPT_PATH",
         ],
     ),
     "prompt_texts": ("✍️ Тексты промптов", list(PROMPT_TEXT_KEYS)),
@@ -225,7 +217,7 @@ def _build_fields() -> dict[str, AdminField]:
 
 
 FIELDS = _build_fields()
-for prefix in ("ANSWER", "SUMMARY", "CONSPIRACY", "HOROSCOPE", "JOKE", "ROAST"):
+for prefix in ("ANSWER", "SUMMARY", "CONSPIRACY", "HOROSCOPE", "JOKE"):
     group_key = prefix.lower()
     GROUPS[group_key] = (
         GROUPS[group_key][0],

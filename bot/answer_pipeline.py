@@ -34,11 +34,15 @@ async def generate_clean_answer(
     system_prompt: str | None = None,
     model: str,
     params: GenerationParams,
+    max_tokens: int | None = None,
+    web_search: bool = False,
 ) -> str:
     raw = await llm.generate_with_params(
         user_prompt,
         system_prompt=system_prompt,
         model=model,
         params=params,
+        max_tokens=max_tokens,
+        web_search=web_search,
     )
     return extract_valid_final_answer(raw)
