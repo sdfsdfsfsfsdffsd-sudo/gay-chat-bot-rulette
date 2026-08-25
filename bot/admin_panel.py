@@ -335,7 +335,17 @@ def next_publication_at(settings: Settings, key: str, *, now: datetime | None = 
     }
     if key in day_jobs:
         every_days, time_value = day_jobs[key]
-        return _next_time_of_day(current, time_value) if every_days > 0 else None
+        if every_days <= 0:
+            return None
+        if every_days > 1:
+            hour, minute = map(int, time_value.split(":", 1))
+            return (current + timedelta(days=every_days)).replace(
+                hour=hour,
+                minute=minute,
+                second=0,
+                microsecond=0,
+            )
+        return _next_time_of_day(current, time_value)
     if key == "WORD_STATS_ENABLED":
         return _next_time_of_day(current, settings.word_stats_time)
     if key == "AUTO_BULLY_ENABLED" and settings.bully_every_minutes > 0:

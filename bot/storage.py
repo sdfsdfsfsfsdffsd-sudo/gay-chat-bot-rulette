@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
 import aiosqlite
@@ -9,6 +9,7 @@ import aiosqlite
 class Storage:
     def __init__(self, path: Path) -> None:
         self.path = path
+        self._sent_at: dict[str, datetime] = {}
 
     async def init(self) -> None:
         self.path.parent.mkdir(parents=True, exist_ok=True)
@@ -52,6 +53,14 @@ class Storage:
                 )
                 """
             )
+            cursor = await db.execute("SELECT key, sent_at FROM sent_items")
+            rows = await cursor.fetchall()
+            self._sent_at = {}
+            for key, sent_at in rows:
+                try:
+                    self._sent_at[key] = datetime.fromisoformat(sent_at)
+                except (TypeError, ValueError):
+                    continue
             await db.commit()
 
     async def save_message(
@@ -165,13 +174,18 @@ class Storage:
             row = await cursor.fetchone()
         return row is not None
 
-    async def mark_sent(self, key: str) -> None:
+    def last_sent_at(self, key: str) -> datetime | None:
+        return self._sent_at.get(key)
+
+    async def mark_sent(self, key: str, *, sent_at: datetime | None = None) -> None:
+        timestamp = sent_at or datetime.now(timezone.utc)
         async with aiosqlite.connect(self.path) as db:
             await db.execute(
                 "INSERT OR REPLACE INTO sent_items(key, sent_at) VALUES (?, ?)",
-                (key, datetime.now().isoformat()),
+                (key, timestamp.isoformat()),
             )
             await db.commit()
+        self._sent_at[key] = timestamp
 
     async def prompt_overrides(self) -> dict[str, str]:
         async with aiosqlite.connect(self.path) as db:

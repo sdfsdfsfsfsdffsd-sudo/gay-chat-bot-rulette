@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import tempfile
 import unittest
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 from bot.storage import Storage
@@ -84,6 +84,20 @@ class StorageTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(overrides["ANSWER_TEMPERATURE"], "1.05")
         self.assertNotIn("ANSWER_TEMPERATURE", cleared)
+
+    async def test_last_sent_time_survives_storage_restart(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            path = Path(temp_dir) / "bot.sqlite3"
+            sent_at = datetime(2026, 8, 25, 18, 30, tzinfo=timezone.utc)
+            storage = Storage(path)
+            await storage.init()
+            await storage.mark_sent("schedule:conspiracy", sent_at=sent_at)
+
+            restored = Storage(path)
+            await restored.init()
+
+        self.assertEqual(storage.last_sent_at("schedule:conspiracy"), sent_at)
+        self.assertEqual(restored.last_sent_at("schedule:conspiracy"), sent_at)
 
 
 if __name__ == "__main__":

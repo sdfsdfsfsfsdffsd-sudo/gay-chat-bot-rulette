@@ -429,6 +429,8 @@ def build_router(
             await message.answer(text[:4000], parse_mode="HTML")
         except Exception:
             await message.answer(text[:4000])
+        await storage.mark_sent("schedule:summary")
+        await refresh_runtime_config()
 
     @router.message(Command("horoscope_now"))
     async def horoscope_now(message: Message) -> None:
@@ -450,6 +452,8 @@ def build_router(
                 await message.answer(message_text[:4000], parse_mode="HTML")
             except Exception:
                 await message.answer(message_text[:4000])
+        await storage.mark_sent("schedule:horoscope")
+        await refresh_runtime_config()
 
 
     @router.message(Command("joke_now"))
@@ -465,6 +469,10 @@ def build_router(
             await message.answer(format_joke_html(joke)[:4000], parse_mode="HTML", disable_web_page_preview=True)
         except Exception:
             await message.answer(joke.text[:4000])
+        requested_kind = command_argument(message.text).lower()
+        joke_kind = requested_kind if requested_kind in {"a", "b"} else random.choice(("a", "b"))
+        await storage.mark_sent(f"schedule:joke_{joke_kind}")
+        await refresh_runtime_config()
 
     @router.message(Command("conspiracy_now"))
     async def conspiracy_now(message: Message) -> None:
@@ -490,6 +498,8 @@ def build_router(
             await message.answer(normalize_telegram_html(text)[:4000], parse_mode="HTML")
         except Exception:
             await message.answer(text[:4000])
+        await storage.mark_sent("schedule:conspiracy")
+        await refresh_runtime_config()
 
     @router.message(Command("bully"))
     async def bully_now(message: Message) -> None:

@@ -34,7 +34,14 @@ def _hour_min(value: str) -> tuple[int, int]:
     return int(hour), int(minute)
 
 
-def periodic_day_trigger(every_days: float, time_value: str, tz: ZoneInfo, *, now: datetime | None = None):
+def periodic_day_trigger(
+    every_days: float,
+    time_value: str,
+    tz: ZoneInfo,
+    *,
+    now: datetime | None = None,
+    last_run: datetime | None = None,
+):
     if every_days <= 0:
         return None
     hour, minute = _hour_min(time_value)
@@ -42,9 +49,17 @@ def periodic_day_trigger(every_days: float, time_value: str, tz: ZoneInfo, *, no
         return CronTrigger(hour=hour, minute=minute, timezone=tz)
 
     current = now.astimezone(tz) if now else datetime.now(tz)
-    first_run = current.replace(hour=hour, minute=minute, second=0, microsecond=0)
-    if first_run <= current:
-        first_run += timedelta(days=1)
+    if last_run is not None:
+        anchor = last_run.replace(tzinfo=tz) if last_run.tzinfo is None else last_run.astimezone(tz)
+        first_run = (anchor + timedelta(days=every_days)).replace(hour=hour, minute=minute, second=0, microsecond=0)
+    elif every_days > 1:
+        first_run = (current + timedelta(days=every_days)).replace(hour=hour, minute=minute, second=0, microsecond=0)
+    else:
+        first_run = current.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        if first_run <= current:
+            first_run += timedelta(days=1)
+    while first_run <= current:
+        first_run += timedelta(days=every_days)
     return IntervalTrigger(days=every_days, start_date=first_run, timezone=tz)
 
 
@@ -97,6 +112,7 @@ async def send_horoscope(bot: Bot, settings: Settings, storage: Storage, llm: Op
     )
     for message_text in split_horoscope_by_participant(text, participants):
         await _send_text(bot, settings.bot_chat_id, message_text, parse_mode="HTML")
+    await storage.mark_sent("schedule:horoscope")
 
 
 async def send_summary(bot: Bot, settings: Settings, storage: Storage, llm: OpenRouterClient, prompts: PromptSet) -> None:
@@ -106,6 +122,7 @@ async def send_summary(bot: Bot, settings: Settings, storage: Storage, llm: Open
     lines = await storage.recent_messages(settings.bot_chat_id, hours=settings.summary_context_hours)
     if not lines:
         await _send_text(bot, settings.bot_chat_id, "<b>SVOдка за день</b>\n\n🫥 Сегодня чат мастерски изображал тишину.", parse_mode="HTML")
+        await storage.mark_sent("schedule:summary")
         return
     participants = await storage.recent_participants(settings.bot_chat_id, hours=settings.summary_context_hours)
     prompt = f"{_participants_block(participants)}\n\nСообщения за день:\n" + "\n".join(lines[-500:])
@@ -117,11 +134,13 @@ async def send_summary(bot: Bot, settings: Settings, storage: Storage, llm: Open
         max_tokens=1600,
     )
     await _send_text(bot, settings.bot_chat_id, text, parse_mode="HTML")
+    await storage.mark_sent("schedule:summary")
 
 
 async def send_joke(
     bot: Bot,
     settings: Settings,
+    storage: Storage,
     joke_type: str = "a",
 ) -> None:
     if settings.bot_chat_id is None:
@@ -131,6 +150,7 @@ async def send_joke(
         await _send_text(bot, settings.bot_chat_id, "Не смог найти анекдот: источники не ответили или пустые.")
         return
     await _send_text(bot, settings.bot_chat_id, format_joke_html(joke), parse_mode="HTML")
+    await storage.mark_sent(f"schedule:joke_{joke_type}")
 
 
 async def maybe_send_bully(bot: Bot, settings: Settings, storage: Storage, prompts: PromptSet) -> None:
@@ -161,6 +181,7 @@ async def send_conspiracy(bot: Bot, settings: Settings, storage: Storage, llm: O
         max_tokens=900,
     )
     await _send_text(bot, settings.bot_chat_id, text)
+    await storage.mark_sent("schedule:conspiracy")
 
 
 async def send_alabuga_news(bot: Bot, settings: Settings, storage: Storage) -> None:
@@ -195,14 +216,20 @@ def configure_scheduler(
     day_jobs = (
         ("horoscope", "horoscope_enabled", send_horoscope, settings.horoscope_every_days, settings.horoscope_time, [bot, settings, storage, llm, prompts]),
         ("summary", "summary_enabled", send_summary, settings.summary_every_days, settings.daily_summary_time, [bot, settings, storage, llm, prompts]),
-        ("joke_a", "joke_a_enabled", send_joke, settings.joke_a_every_days, settings.joke_a_time, [bot, settings, "a"]),
-        ("joke_b", "joke_b_enabled", send_joke, settings.joke_b_every_days, settings.joke_b_time, [bot, settings, "b"]),
+        ("joke_a", "joke_a_enabled", send_joke, settings.joke_a_every_days, settings.joke_a_time, [bot, settings, storage, "a"]),
+        ("joke_b", "joke_b_enabled", send_joke, settings.joke_b_every_days, settings.joke_b_time, [bot, settings, storage, "b"]),
         ("conspiracy", "conspiracy_enabled", send_conspiracy, settings.conspiracy_every_days, settings.conspiracy_time, [bot, settings, storage, llm, prompts]),
     )
     for job_id, enabled_field, function, every_days, time_value, args in day_jobs:
         if not _enabled(settings, enabled_field):
             continue
-        trigger = periodic_day_trigger(every_days, time_value, tz)
+        last_run = storage.last_sent_at(f"schedule:{job_id}") if hasattr(storage, "last_sent_at") else None
+        trigger = periodic_day_trigger(
+            every_days,
+            time_value,
+            tz,
+            last_run=last_run,
+        )
         if trigger is not None:
             scheduler.add_job(function, trigger, args=args, id=job_id)
 

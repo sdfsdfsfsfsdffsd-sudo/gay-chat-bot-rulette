@@ -104,6 +104,10 @@ The `*_ENABLED` flags pause/resume scheduled background posts without changing
 their interval or time settings. In `/admin`, open `Автопубликации` and tap a
 task; its button immediately changes between `✅` and `⛔`.
 
+For multi-day schedules, the last successful publication time is stored in
+SQLite. Restarts and unrelated admin changes therefore preserve the remaining
+interval instead of resetting a three-day job to "tomorrow".
+
 The admin panel is organized by tasks rather than environment keys:
 
 - `Автопубликации` shows live on/off states, schedules, and time remaining until each actual scheduler run;
