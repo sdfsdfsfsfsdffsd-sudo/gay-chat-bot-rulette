@@ -50,7 +50,11 @@ class JokeParserTests(unittest.TestCase):
             "<p>Анекдот с <опасным> HTML и нормальной длиной текста.</p>",
         )
 
-        self.assertIn("&lt;опасным&gt;", format_joke_html(jokes[0]))
+        formatted = format_joke_html(jokes[0])
+
+        self.assertIn("&lt;опасным&gt;", formatted)
+        self.assertNotIn("Источник", formatted)
+        self.assertNotIn("href=", formatted)
 
 
 if __name__ == "__main__":

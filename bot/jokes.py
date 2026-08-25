@@ -156,5 +156,6 @@ async def fetch_random_joke(source_urls: list[str]) -> JokeItem | None:
     return None
 
 
+
 def format_joke_html(joke: JokeItem) -> str:
-    return f"{html.escape(joke.text, quote=False)}\n\n<a href=\"{html.escape(joke.source_url, quote=True)}\">Источник</a>"
+    return html.escape(joke.text, quote=False)

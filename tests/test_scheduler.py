@@ -144,7 +144,7 @@ class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
             await send_joke(bot, settings, object(), llm, prompts, "b")
 
         fetch.assert_awaited_once_with(["https://example.test/jokes"])
-        self.assertEqual(bot.sent, (123, 'generated joke\n\n<a href="https://example.test/jokes">Источник</a>', "HTML"))
+        self.assertEqual(bot.sent, (123, "generated joke", "HTML"))
 
     async def test_auto_roast_uses_static_bully_message_without_llm(self) -> None:
         class Bot:
