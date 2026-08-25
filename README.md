@@ -106,7 +106,7 @@ task; its button immediately changes between `✅` and `⛔`.
 
 The admin panel is organized by tasks rather than environment keys:
 
-- `Автопубликации` shows all live on/off states;
+- `Автопубликации` shows live on/off states, schedules, and time remaining until each actual scheduler run;
 - `Функции` contains behavior, schedule, prompts, and per-service models;
 - `Подключения` contains Telegram, OpenRouter, forwarding, and sources;
 - `Доступ и чат` contains the bound chat and administrator ids;

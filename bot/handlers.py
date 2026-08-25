@@ -8,6 +8,7 @@ import random
 import re
 from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
+from datetime import datetime
 
 from aiogram import Bot, Router
 from aiogram.filters import Command
@@ -163,6 +164,7 @@ def build_router(
     *,
     reload_scheduler: Callable[[], None] | None = None,
     reload_command_menu: Callable[[], Awaitable[None]] | None = None,
+    get_scheduled_runs: Callable[[], dict[str, datetime]] | None = None,
 ) -> Router:
     router = Router()
     active_questions: dict[int, asyncio.Lock] = {}
@@ -191,6 +193,8 @@ def build_router(
             key,
             await storage.prompt_overrides(),
             await storage.settings_overrides(),
+            settings,
+            get_scheduled_runs() if get_scheduled_runs is not None else None,
         )
 
     @router.message(Command("start"))
@@ -259,7 +263,8 @@ def build_router(
             await callback.message.edit_text(admin_home_text(settings), reply_markup=admin_home_keyboard(settings), parse_mode="HTML")
         elif action == "g" and value in GROUPS:
             await sync_runtime_config(settings, prompts, storage)
-            await callback.message.edit_text(admin_group_text(value), reply_markup=admin_group_keyboard(value, settings), parse_mode="HTML")
+            scheduled_runs = get_scheduled_runs() if get_scheduled_runs is not None else None
+            await callback.message.edit_text(admin_group_text(value, settings, scheduled_runs), reply_markup=admin_group_keyboard(value, settings, scheduled_runs), parse_mode="HTML")
         elif action == "f" and value in FIELDS:
             await callback.message.edit_text(
                 await field_text(value),
@@ -285,9 +290,10 @@ def build_router(
             await storage.set_setting_override(value, "false" if current else "true")
             await refresh_runtime_config()
             if action == "toggle" and return_group in GROUPS:
+                scheduled_runs = get_scheduled_runs() if get_scheduled_runs is not None else None
                 await callback.message.edit_text(
-                    admin_group_text(return_group),
-                    reply_markup=admin_group_keyboard(return_group, settings),
+                    admin_group_text(return_group, settings, scheduled_runs),
+                    reply_markup=admin_group_keyboard(return_group, settings, scheduled_runs),
                     parse_mode="HTML",
                 )
             else:

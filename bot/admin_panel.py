@@ -2,7 +2,10 @@ from __future__ import annotations
 
 import html
 from dataclasses import dataclass
+from datetime import datetime, timedelta
+from math import ceil
 from pathlib import Path
+from zoneinfo import ZoneInfo
 
 from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
@@ -259,6 +262,27 @@ GROUPS: dict[str, AdminGroup] = {
 
 HOME_GROUPS = ("automations", "features", "integrations", "access", "advanced")
 
+GROUP_AUTOMATIONS: dict[str, tuple[str, ...]] = {
+    "summary": ("SUMMARY_ENABLED",),
+    "horoscope": ("HOROSCOPE_ENABLED",),
+    "conspiracy": ("CONSPIRACY_ENABLED",),
+    "jokes": ("JOKE_A_ENABLED", "JOKE_B_ENABLED"),
+    "bully": ("AUTO_BULLY_ENABLED",),
+    "word_stats": ("WORD_STATS_ENABLED",),
+    "alabuga": ("ALABUGA_ENABLED",),
+}
+
+AUTOMATION_JOB_IDS = {
+    "SUMMARY_ENABLED": "summary",
+    "HOROSCOPE_ENABLED": "horoscope",
+    "WORD_STATS_ENABLED": "word_stats",
+    "JOKE_A_ENABLED": "joke_a",
+    "JOKE_B_ENABLED": "joke_b",
+    "CONSPIRACY_ENABLED": "conspiracy",
+    "AUTO_BULLY_ENABLED": "bully",
+    "ALABUGA_ENABLED": "alabuga",
+}
+
 
 def _enabled(settings: Settings | None, key: str) -> bool:
     if settings is not None:
@@ -281,6 +305,112 @@ def _days_label(value: str, time_value: str) -> str:
     if days == 1:
         return f"ежедневно {time_value}"
     return f"раз в {days:g} дн. · {time_value}"
+
+
+def _local_now(settings: Settings, now: datetime | None = None) -> tuple[datetime, ZoneInfo]:
+    timezone = ZoneInfo(settings.timezone)
+    if now is None:
+        return datetime.now(timezone), timezone
+    if now.tzinfo is None:
+        return now.replace(tzinfo=timezone), timezone
+    return now.astimezone(timezone), timezone
+
+
+def _next_time_of_day(current: datetime, time_value: str) -> datetime:
+    hour, minute = map(int, time_value.split(":", 1))
+    candidate = current.replace(hour=hour, minute=minute, second=0, microsecond=0)
+    return candidate + timedelta(days=1) if candidate <= current else candidate
+
+
+def next_publication_at(settings: Settings, key: str, *, now: datetime | None = None) -> datetime | None:
+    if not _enabled(settings, key):
+        return None
+    current, _ = _local_now(settings, now)
+    day_jobs = {
+        "SUMMARY_ENABLED": (settings.summary_every_days, settings.daily_summary_time),
+        "HOROSCOPE_ENABLED": (settings.horoscope_every_days, settings.horoscope_time),
+        "JOKE_A_ENABLED": (settings.joke_a_every_days, settings.joke_a_time),
+        "JOKE_B_ENABLED": (settings.joke_b_every_days, settings.joke_b_time),
+        "CONSPIRACY_ENABLED": (settings.conspiracy_every_days, settings.conspiracy_time),
+    }
+    if key in day_jobs:
+        every_days, time_value = day_jobs[key]
+        return _next_time_of_day(current, time_value) if every_days > 0 else None
+    if key == "WORD_STATS_ENABLED":
+        return _next_time_of_day(current, settings.word_stats_time)
+    if key == "AUTO_BULLY_ENABLED" and settings.bully_every_minutes > 0:
+        return current + timedelta(minutes=settings.bully_every_minutes)
+    if key == "ALABUGA_ENABLED" and settings.alabuga_every_hours > 0:
+        return current + timedelta(hours=settings.alabuga_every_hours)
+    return None
+
+
+def _remaining_label(current: datetime, target: datetime) -> str:
+    total_minutes = max(0, ceil((target - current).total_seconds() / 60))
+    if total_minutes == 0:
+        return "меньше минуты"
+    days, remainder = divmod(total_minutes, 24 * 60)
+    hours, minutes = divmod(remainder, 60)
+    parts: list[str] = []
+    if days:
+        parts.append(f"{days} дн.")
+    if hours:
+        parts.append(f"{hours} ч")
+    if minutes and len(parts) < 2:
+        parts.append(f"{minutes} мин")
+    return " ".join(parts)
+
+
+def publication_preview(
+    settings: Settings,
+    key: str,
+    *,
+    now: datetime | None = None,
+    scheduled_runs: dict[str, datetime] | None = None,
+) -> str:
+    if not _enabled(settings, key):
+        return "приостановлена, расписание сохранено"
+    current, _ = _local_now(settings, now)
+    if scheduled_runs is None:
+        target = next_publication_at(settings, key, now=current)
+    else:
+        target = scheduled_runs.get(AUTOMATION_JOB_IDS[key])
+        if target is not None:
+            target = target.astimezone(current.tzinfo)
+    if target is None:
+        return "не запланирована: интервал равен 0"
+    if target.date() == current.date():
+        absolute = f"сегодня в {target:%H:%M}"
+    elif target.date() == (current + timedelta(days=1)).date():
+        absolute = f"завтра в {target:%H:%M}"
+    else:
+        absolute = target.strftime("%d.%m в %H:%M")
+    return f"через {_remaining_label(current, target)} ({absolute})"
+
+
+def publication_preview_compact(
+    settings: Settings,
+    key: str,
+    scheduled_runs: dict[str, datetime] | None = None,
+) -> str:
+    if not _enabled(settings, key):
+        return "пауза"
+    preview = publication_preview(settings, key, scheduled_runs=scheduled_runs)
+    if preview.startswith("не запланирована"):
+        return "не запланирована"
+    return preview.split(" (")[0]
+
+
+def _automation_for_group(group_key: str) -> tuple[str, ...]:
+    current = group_key
+    while current in GROUPS:
+        if current in GROUP_AUTOMATIONS:
+            return GROUP_AUTOMATIONS[current]
+        parent = GROUPS[current].parent
+        if parent == "home":
+            break
+        current = parent
+    return ()
 
 
 def automation_detail(settings: Settings | None, key: str) -> str:
@@ -313,7 +443,11 @@ def admin_home_keyboard(settings: Settings | None = None) -> InlineKeyboardMarku
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def admin_group_keyboard(group_key: str, settings: Settings | None = None) -> InlineKeyboardMarkup:
+def admin_group_keyboard(
+    group_key: str,
+    settings: Settings | None = None,
+    scheduled_runs: dict[str, datetime] | None = None,
+) -> InlineKeyboardMarkup:
     group = GROUPS[group_key]
     rows: list[list[InlineKeyboardButton]] = []
     if group.children:
@@ -331,7 +465,9 @@ def admin_group_keyboard(group_key: str, settings: Settings | None = None) -> In
         if group.toggle_dashboard:
             status = "✅" if _enabled(settings, key) else "⛔"
             detail = automation_detail(settings, key)
-            rows.append([InlineKeyboardButton(text=f"{status} {FIELDS[key].label} · {detail}", callback_data=f"admin:toggle:{key}:{group_key}")])
+            next_run = publication_preview_compact(settings, key, scheduled_runs) if settings is not None else ""
+            suffix = f" · {next_run}" if next_run else ""
+            rows.append([InlineKeyboardButton(text=f"{status} {FIELDS[key].label} · {detail}{suffix}", callback_data=f"admin:toggle:{key}:{group_key}")])
         else:
             label = FIELDS[key].label
             if key in BOOLEAN_SETTING_KEYS:
@@ -401,15 +537,26 @@ def admin_home_text(settings: Settings | None = None) -> str:
     )
 
 
-def admin_group_text(group_key: str) -> str:
+def admin_group_text(
+    group_key: str,
+    settings: Settings | None = None,
+    scheduled_runs: dict[str, datetime] | None = None,
+) -> str:
     group = GROUPS[group_key]
-    return f"<b>{html.escape(group.title)}</b>\n\n{html.escape(group.description)}"
+    preview = ""
+    automation_keys = _automation_for_group(group_key)
+    if settings is not None and automation_keys:
+        lines = [f"{FIELDS[key].label}: <b>{html.escape(publication_preview(settings, key, scheduled_runs=scheduled_runs))}</b>" for key in automation_keys]
+        preview = "\n\n<b>Следующая публикация</b>\n" + "\n".join(lines)
+    return f"<b>{html.escape(group.title)}</b>\n\n{html.escape(group.description)}{preview}"
 
 
 def admin_field_text(
     key: str,
     prompt_overrides: dict[str, str] | None = None,
     setting_overrides: dict[str, str] | None = None,
+    settings: Settings | None = None,
+    scheduled_runs: dict[str, datetime] | None = None,
 ) -> str:
     env = read_env()
     field = FIELDS[key]
@@ -434,11 +581,17 @@ def admin_field_text(
     if key in BOOLEAN_SETTING_KEYS:
         status = f"\n\n<b>Состояние:</b> {'✅ включено' if shown.lower() in {'true', '1', 'yes', 'on', 'да'} else '⛔ выключено'}"
     edit_hint = "" if not field.editable or key in BOOLEAN_SETTING_KEYS else "\n\nНажми «Изменить» и отправь новое значение."
+    schedule_preview = ""
+    if settings is not None:
+        automation_keys = _automation_for_group(group_for_key(key))
+        if automation_keys:
+            lines = [f"{FIELDS[automation_key].label}: <b>{html.escape(publication_preview(settings, automation_key, scheduled_runs=scheduled_runs))}</b>" for automation_key in automation_keys]
+            schedule_preview = "\n\n<b>Следующая публикация</b>\n" + "\n".join(lines)
     return (
         f"<b>⚙️ {html.escape(field.label)}</b>"
         f"{status}\n\n"
         f"<b>Текущее значение</b>\n<code>{html.escape(shown)}</code>\n\n"
-        f"<i>Источник: {html.escape(source)}</i>{edit_hint}"
+        f"<i>Источник: {html.escape(source)}</i>{schedule_preview}{edit_hint}"
     )
 
 

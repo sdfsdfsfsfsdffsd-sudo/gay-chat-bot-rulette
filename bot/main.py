@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+from datetime import datetime
 
 from aiogram import Bot, Dispatcher
 
@@ -45,6 +46,13 @@ async def main() -> None:
     async def reload_command_menu() -> None:
         await register_bot_commands(bot, settings)
 
+    def scheduled_runs() -> dict[str, datetime]:
+        return {
+            job.id: job.next_run_time
+            for job in scheduler.get_jobs()
+            if getattr(job, "next_run_time", None) is not None
+        }
+
     dispatcher.include_router(
         build_router(
             settings,
@@ -53,6 +61,7 @@ async def main() -> None:
             prompts,
             reload_scheduler=reload_scheduler,
             reload_command_menu=reload_command_menu,
+            get_scheduled_runs=scheduled_runs,
         )
     )
 
