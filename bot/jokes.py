@@ -11,7 +11,6 @@ from bs4 import BeautifulSoup
 
 
 DEFAULT_JOKE_SOURCE_URLS = [
-    "https://www.motustrans.ru/forum/forum12/topic3/messages/",
     "https://anekdotovstreet.com/transport/dalnoboyschiki/",
     "https://taha163.ru/?page_id=135",
 ]

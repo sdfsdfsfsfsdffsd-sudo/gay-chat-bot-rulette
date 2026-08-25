@@ -2,10 +2,13 @@ from __future__ import annotations
 
 import unittest
 
-from bot.jokes import allowed_joke_source, format_joke_html, parse_jokes_from_html
+from bot.jokes import DEFAULT_JOKE_SOURCE_URLS, allowed_joke_source, format_joke_html, parse_jokes_from_html
 
 
 class JokeParserTests(unittest.TestCase):
+    def test_default_rotation_excludes_motustrans(self) -> None:
+        self.assertNotIn("https://www.motustrans.ru/forum/forum12/topic3/messages/", DEFAULT_JOKE_SOURCE_URLS)
+
     def test_parses_anekdotovstreet_paragraphs(self) -> None:
         html = """
         <p>Сборник самых смешных анекдотов. Читайте свежие анекдоты.</p>

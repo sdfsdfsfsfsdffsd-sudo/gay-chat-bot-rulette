@@ -87,7 +87,7 @@ ALABUGA_EVERY_HOURS=4
 Jokes are fetched from configured websites:
 
 ```env
-JOKE_SOURCE_URLS=https://www.motustrans.ru/forum/forum12/topic3/messages/,https://anekdotovstreet.com/transport/dalnoboyschiki/,https://taha163.ru/?page_id=135
+JOKE_SOURCE_URLS=https://anekdotovstreet.com/transport/dalnoboyschiki/,https://taha163.ru/?page_id=135
 ```
 
 If one site is down, the bot tries the next configured source.
