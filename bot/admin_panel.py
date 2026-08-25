@@ -143,8 +143,12 @@ def field_label(key: str, fallback: str) -> str:
 def _build_fields() -> dict[str, AdminField]:
     fields: dict[str, AdminField] = {}
     for key, label, secret in QUESTIONS:
+        if key in SECRET_KEYS:
+            continue
         fields[key] = AdminField(key, field_label(key, label), secret or key in SECRET_KEYS)
     for key in DEFAULTS:
+        if key in SECRET_KEYS:
+            continue
         fallback = key.replace("_", " ").title()
         fields.setdefault(key, AdminField(key, field_label(key, fallback), key in SECRET_KEYS))
     for key, label in PROMPT_TEXT_KEYS.items():
@@ -182,8 +186,9 @@ GROUPS: dict[str, AdminGroup] = {
     ),
     "integrations": AdminGroup(
         "🔌 Подключения",
-        "Ключи сервисов, Telegram-пересылка и внешние источники.",
-        children=("telegram", "openrouter", "forwarding", "sources"),
+        "Состояние Telegram, OpenRouter и пересылки. Секреты в админке не отображаются.",
+        fields=("TELEGRAM_USER_API_ID",),
+        children=("sources",),
     ),
     "access": AdminGroup(
         "👥 Доступ и чат",
@@ -553,6 +558,40 @@ def admin_group_text(
     scheduled_runs: dict[str, datetime] | None = None,
 ) -> str:
     group = GROUPS[group_key]
+    if group_key == "integrations":
+        if settings is None:
+            return f"<b>{html.escape(group.title)}</b>\n\nДанные подключений пока недоступны."
+        bot_status = "✅ подключён" if getattr(settings, "telegram_bot_token", "") else "⛔ не настроен"
+        router_status = "✅ подключён" if getattr(settings, "openrouter_api_key", "") else "⛔ не настроен"
+        forwarding_ready = all((
+            getattr(settings, "telegram_user_api_id", None),
+            getattr(settings, "telegram_user_api_hash", ""),
+            getattr(settings, "telegram_user_session", ""),
+        ))
+        forwarding_status = "✅ подключена" if forwarding_ready else "⛔ не настроена полностью"
+        api_id = getattr(settings, "telegram_user_api_id", None)
+        api_id_text = str(api_id) if api_id is not None else "не задан"
+        return (
+            f"<b>{html.escape(group.title)}</b>\n\n"
+            f"🤖 Telegram-бот: <b>{bot_status}</b>\n"
+            f"📨 Telegram-пересылка: <b>{forwarding_status}</b>\n"
+            f"└ API ID: <code>{html.escape(api_id_text)}</code>\n"
+            f"🧠 OpenRouter: <b>{router_status}</b>\n\n"
+            "<i>Токены, API hash и StringSession скрыты и изменяются только в переменных окружения.</i>"
+        )
+    if group_key == "access":
+        if settings is None:
+            return f"<b>{html.escape(group.title)}</b>\n\nДанные доступа пока недоступны."
+        chat_id = getattr(settings, "bot_chat_id", None)
+        chat_text = str(chat_id) if chat_id is not None else "не привязан"
+        admin_ids = sorted(getattr(settings, "admin_user_ids", set()))
+        admins_text = ", ".join(map(str, admin_ids)) if admin_ids else "не заданы"
+        return (
+            f"<b>{html.escape(group.title)}</b>\n\n"
+            f"💬 Привязанный чат: <code>{html.escape(chat_text)}</code>\n"
+            f"👥 Администраторы: <code>{html.escape(admins_text)}</code>\n\n"
+            "Нажми нужный пункт ниже, чтобы изменить значение."
+        )
     preview = ""
     automation_keys = _automation_for_group(group_key)
     if settings is not None and automation_keys:

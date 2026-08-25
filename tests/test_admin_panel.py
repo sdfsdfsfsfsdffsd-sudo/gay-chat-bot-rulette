@@ -14,10 +14,10 @@ from bot.admin_panel import (
     admin_field_keyboard,
     admin_field_text,
     admin_group_keyboard,
+    admin_group_text,
     admin_home_keyboard,
     admin_home_text,
     admin_set_prompt_text,
-    display_value,
     next_publication_at,
     publication_preview,
 )
@@ -70,6 +70,13 @@ class AdminPanelTests(unittest.TestCase):
             self.assertNotIn(key, FIELDS)
         self.assertIn("BULLY_PROBABILITY", FIELDS)
         self.assertIn("BULLY_TARGET_USERNAME", FIELDS)
+
+    def test_secret_credentials_are_not_exposed(self) -> None:
+        for key in (
+            "TELEGRAM_BOT_TOKEN", "OPENROUTER_API_KEY",
+            "TELEGRAM_USER_API_HASH", "TELEGRAM_USER_SESSION",
+        ):
+            self.assertNotIn(key, FIELDS)
 
     def test_features_have_clear_nested_navigation(self) -> None:
         buttons = [button.text for row in admin_group_keyboard("features", settings_stub()).inline_keyboard for button in row]
@@ -150,8 +157,29 @@ class AdminPanelTests(unittest.TestCase):
             "через 2 дн. 23 ч (28.08 в 20:00)",
         )
 
-    def test_masks_secret_values(self) -> None:
-        self.assertEqual(display_value("OPENROUTER_API_KEY", "sk-1234567890"), "sk-1...7890")
+    def test_connection_summary_shows_safe_runtime_state(self) -> None:
+        text = admin_group_text("integrations", settings_stub(
+            telegram_bot_token="secret-token",
+            openrouter_api_key="secret-key",
+            telegram_user_api_id=24981156,
+            telegram_user_api_hash="secret-hash",
+            telegram_user_session="secret-session",
+        ))
+
+        self.assertIn("Telegram-бот: <b>✅ подключён</b>", text)
+        self.assertIn("Telegram-пересылка: <b>✅ подключена</b>", text)
+        self.assertIn("API ID: <code>24981156</code>", text)
+        self.assertIn("OpenRouter: <b>✅ подключён</b>", text)
+        self.assertNotIn("secret", text)
+
+    def test_access_summary_shows_runtime_ids(self) -> None:
+        text = admin_group_text("access", settings_stub(
+            bot_chat_id=-100123456789,
+            admin_user_ids={643018770, 549229923},
+        ))
+
+        self.assertIn("<code>-100123456789</code>", text)
+        self.assertIn("<code>549229923, 643018770</code>", text)
 
     def test_prompt_and_setting_sources_are_readable(self) -> None:
         prompt_text = admin_field_text("SUMMARY_PROMPT_TEXT", {"SUMMARY_PROMPT_TEXT": "admin prompt"})
