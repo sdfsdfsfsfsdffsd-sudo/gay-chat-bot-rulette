@@ -6,6 +6,7 @@ from bot.admin_panel import (
     FIELDS,
     GROUPS,
     admin_field_text,
+    admin_field_keyboard,
     admin_home_keyboard,
     admin_home_text,
     admin_set_prompt_text,
@@ -29,13 +30,23 @@ class AdminPanelTests(unittest.TestCase):
         self.assertIn("BULLY_TARGET_USERNAME", FIELDS)
         self.assertIn("CONSPIRACY_CONTEXT_DAYS", FIELDS)
         self.assertIn("ANSWER_WEB_SEARCH_ENABLED", FIELDS)
+        self.assertIn("ALABUGA_ENABLED", FIELDS)
+        self.assertIn("SUMMARY_ENABLED", FIELDS)
         self.assertNotIn("ROAST_CONTEXT_DAYS", FIELDS)
         self.assertIn("prompt_texts", GROUPS)
+        self.assertIn("automations", GROUPS)
         self.assertIn("JOKE_EVERY_DAYS", GROUPS["schedule"][1])
         self.assertIn("JOKE_A_EVERY_DAYS", GROUPS["schedule"][1])
         self.assertIn("BULLY_MESSAGE_TEXT", GROUPS["schedule"][1])
         self.assertIn("BULLY_TARGET_USERNAME", GROUPS["main"][1])
         self.assertIn("ANSWER_WEB_SEARCH_ENABLED", GROUPS["answer"][1])
+        self.assertIn("ALABUGA_ENABLED", GROUPS["automations"][1])
+
+    def test_boolean_fields_have_toggle_button(self) -> None:
+        keyboard = admin_field_keyboard("ALABUGA_ENABLED")
+
+        buttons = [button.text for row in keyboard.inline_keyboard for button in row]
+        self.assertIn("⏯ Переключить", buttons)
 
     def test_masks_secret_values(self) -> None:
         self.assertEqual(display_value("OPENROUTER_API_KEY", "sk-1234567890"), "sk-1...7890")

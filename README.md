@@ -47,6 +47,15 @@ CONSPIRACY_MODEL=deepseek/deepseek-chat
 HOROSCOPE_MODEL=
 JOKE_MODEL=cognitivecomputations/dolphin-mistral-24b-venice-edition
 ANSWER_WEB_SEARCH_ENABLED=true
+HOROSCOPE_ENABLED=true
+SUMMARY_ENABLED=true
+WORD_STATS_ENABLED=true
+JOKE_A_ENABLED=true
+JOKE_B_ENABLED=true
+CONSPIRACY_ENABLED=true
+RANDOM_IMAGE_ENABLED=true
+AUTO_BULLY_ENABLED=true
+ALABUGA_ENABLED=true
 ```
 
 Per-feature model ids are shown in `/admin` and can be changed without restart.
@@ -85,6 +94,10 @@ CONSPIRACY_CONTEXT_DAYS=3
 `ANSWER_WEB_SEARCH_ENABLED` enables OpenRouter web search only for normal
 mention/private questions. Reply-to-bot short answers and chat-context answers
 do not use web search.
+
+The `*_ENABLED` flags pause/resume scheduled background posts without changing
+their interval or time settings. In `/admin`, open `Автопостинг`, choose a task,
+and press `Переключить`.
 
 ## Prompts
 
@@ -213,17 +226,26 @@ native `/` command picker. Public and administrator commands are defined in one
 role-aware registry. Users see only public commands; IDs from `ADMIN_USER_IDS`
 receive the full menu in their private chat and in the bound group.
 
+For everyone:
+
 - `/start` - quick health response.
-- `/bind_chat` - prints the current chat id for `.env`.
-- `/runtime_config` - shows effective models and system-prompt hashes from runtime.
+- `/commands` - shows available commands.
+- `/bully @username` - sends the static bully template.
+- `/word_stats_now` - shows current tracked-word stats.
+- `/alabuga` - forwards a random Alabuga Polytech post when Telegram allows it. `/alabuga_random` remains as a compatibility alias.
+
+For administrators:
+
+- `/admin` - opens the control panel.
+- `/runtime_config` - shows effective models, system-prompt hashes, and automation toggles from runtime.
+- `/forward_config` - shows Telegram forward settings.
+- `/bind_chat` - saves the current chat id to SQLite and applies it at runtime.
 - `/summary_now` - generates a summary immediately.
 - `/horoscope_now` - generates a horoscope immediately.
 - `/joke_now`, `/joke_now a`, `/joke_now b` - generates a joke immediately.
 - `/conspiracy_now` - generates a conspiracy post immediately.
-- `/bully @username` - sends the static bully template.
 - `/bully_text` - shows or changes the static bully text.
 - `/bully_target` - shows or changes the default bully target.
-- `/alabuga_random` - forwards a random Alabuga Polytech post when Telegram allows it.
 
 ## Telegram Forwarding
 

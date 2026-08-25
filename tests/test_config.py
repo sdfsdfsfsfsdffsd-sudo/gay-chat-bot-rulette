@@ -103,6 +103,8 @@ class ConfigTests(unittest.TestCase):
             "HOROSCOPE_CONTEXT_DAYS": "5",
             "CONSPIRACY_CONTEXT_DAYS": "4",
             "ANSWER_WEB_SEARCH_ENABLED": "false",
+            "ALABUGA_ENABLED": "false",
+            "SUMMARY_ENABLED": "false",
         }
         with patch.dict(os.environ, {}, clear=True), patch("bot.config.load_dotenv"):
             settings = load_settings(overrides)
@@ -118,6 +120,8 @@ class ConfigTests(unittest.TestCase):
         self.assertEqual(settings.horoscope_context_days, 5)
         self.assertEqual(settings.conspiracy_context_days, 4)
         self.assertFalse(settings.answer_web_search_enabled)
+        self.assertFalse(settings.alabuga_enabled)
+        self.assertFalse(settings.summary_enabled)
 
     def test_fractional_day_schedule_is_supported(self) -> None:
         overrides = {
@@ -152,6 +156,7 @@ class ConfigTests(unittest.TestCase):
         validate_setting_override("JOKE_A_EVERY_DAYS", "0.5")
         validate_setting_override("JOKE_B_TIME", "18:30")
         validate_setting_override("ANSWER_WEB_SEARCH_ENABLED", "true")
+        validate_setting_override("ALABUGA_ENABLED", "false")
         with self.assertRaises(ValueError):
             validate_setting_override("JOKE_TIME", "25:00")
         with self.assertRaises(ValueError):

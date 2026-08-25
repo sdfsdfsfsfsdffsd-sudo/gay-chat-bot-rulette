@@ -26,8 +26,8 @@ from bot.admin_panel import (
 )
 from bot.answer_pipeline import AnswerExtractionError, generate_clean_answer
 from bot.bully import render_bully_message
-from bot.config import Settings, validate_setting_override
-from bot.commands import commands_text
+from bot.config import BOOLEAN_SETTING_KEYS, Settings, validate_setting_override
+from bot.commands import can_use_command, commands_text
 from bot.horoscope import split_horoscope_by_participant
 from bot.llm import OpenRouterClient
 from bot.prompt_loader import PromptSet
@@ -103,6 +103,14 @@ def build_runtime_config_text(settings: Settings, prompts: PromptSet) -> str:
         f"missing={','.join(missing_forward_fields) if missing_forward_fields else 'none'}"
     )
     rows.append(f"answer_web_search_enabled={getattr(settings, 'answer_web_search_enabled', True)}")
+    rows.append(
+        "automations: "
+        f"summary={settings.summary_enabled} | horoscope={settings.horoscope_enabled} | "
+        f"joke_a={settings.joke_a_enabled} | joke_b={settings.joke_b_enabled} | "
+        f"conspiracy={settings.conspiracy_enabled} | word_stats={settings.word_stats_enabled} | "
+        f"random_image={settings.random_image_enabled} | bully={settings.auto_bully_enabled} | "
+        f"alabuga={settings.alabuga_enabled}"
+    )
     for service in ("answer", "summary", "conspiracy", "horoscope", "joke"):
         model = getattr(settings, f"{service}_model")
         system_prompt = getattr(prompts, f"{service}_system").strip()
@@ -155,6 +163,9 @@ def build_router(
 
     def is_admin(message: Message) -> bool:
         return is_admin_user(message.from_user.id if message.from_user else None)
+
+    def can_run(message: Message, command_name: str) -> bool:
+        return can_use_command(command_name, is_admin(message))
 
     async def refresh_runtime_config() -> None:
         await sync_runtime_config(settings, prompts, storage)
@@ -242,6 +253,17 @@ def build_router(
         elif action == "set" and value in FIELDS:
             pending_admin_updates[callback.from_user.id] = value
             await callback.message.answer(admin_set_prompt_text(value), parse_mode="HTML")
+        elif action == "toggle" and value in FIELDS and value in BOOLEAN_SETTING_KEYS:
+            await sync_runtime_config(settings, prompts, storage)
+            current = bool(getattr(settings, value.lower(), True))
+            await storage.set_setting_override(value, "false" if current else "true")
+            await refresh_runtime_config()
+            await callback.message.edit_text(
+                await field_text(value),
+                reply_markup=admin_field_keyboard(value),
+                parse_mode="HTML",
+            )
+            await callback.message.answer("Готово: переключил и применил без перезапуска.")
         elif action == "clear" and value in FIELDS:
             if value in PROMPT_TEXT_KEYS:
                 await storage.clear_prompt_override(value)
@@ -413,7 +435,7 @@ def build_router(
 
     @router.message(Command("bully"))
     async def bully_now(message: Message) -> None:
-        if not is_admin(message):
+        if not can_run(message, "bully"):
             return
         await sync_runtime_config(settings, prompts, storage)
         arg = command_argument(message.text).lstrip("@")
@@ -494,14 +516,14 @@ def build_router(
 
     @router.message(Command("word_stats_now"))
     async def word_stats_now(message: Message) -> None:
-        if not is_admin(message):
+        if not can_run(message, "word_stats_now"):
             return
         text = await build_daily_word_stats(storage, message.chat.id, settings.tracked_words)
         await message.answer(text[:4000])
 
-    @router.message(Command("alabuga_random"))
+    @router.message(Command("alabuga", "alabuga_random"))
     async def alabuga_random(message: Message, bot: Bot) -> None:
-        if not is_admin(message):
+        if not can_run(message, "alabuga"):
             return
         item = await fetch_random_telegram_item(settings.alabuga_channel_url, limit=30)
         if not item:

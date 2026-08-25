@@ -50,6 +50,10 @@ def periodic_day_trigger(every_days: float, time_value: str, tz: ZoneInfo, *, no
     return IntervalTrigger(days=every_days, start_date=first_run, timezone=tz)
 
 
+def _enabled(settings: Settings, name: str) -> bool:
+    return bool(getattr(settings, name, True))
+
+
 async def _send_text(bot: Bot, chat_id: int | None, text: str, *, parse_mode: str | None = None) -> None:
     if chat_id is None:
         return
@@ -211,23 +215,26 @@ def configure_scheduler(
     word_stats_hour, word_stats_minute = _hour_min(settings.word_stats_time)
 
     day_jobs = (
-        ("horoscope", send_horoscope, settings.horoscope_every_days, settings.horoscope_time, [bot, settings, storage, llm, prompts]),
-        ("summary", send_summary, settings.summary_every_days, settings.daily_summary_time, [bot, settings, storage, llm, prompts]),
-        ("joke_a", send_joke, settings.joke_a_every_days, settings.joke_a_time, [bot, settings, storage, llm, prompts, "a"]),
-        ("joke_b", send_joke, settings.joke_b_every_days, settings.joke_b_time, [bot, settings, storage, llm, prompts, "b"]),
-        ("conspiracy", send_conspiracy, settings.conspiracy_every_days, settings.conspiracy_time, [bot, settings, storage, llm, prompts]),
+        ("horoscope", "horoscope_enabled", send_horoscope, settings.horoscope_every_days, settings.horoscope_time, [bot, settings, storage, llm, prompts]),
+        ("summary", "summary_enabled", send_summary, settings.summary_every_days, settings.daily_summary_time, [bot, settings, storage, llm, prompts]),
+        ("joke_a", "joke_a_enabled", send_joke, settings.joke_a_every_days, settings.joke_a_time, [bot, settings, storage, llm, prompts, "a"]),
+        ("joke_b", "joke_b_enabled", send_joke, settings.joke_b_every_days, settings.joke_b_time, [bot, settings, storage, llm, prompts, "b"]),
+        ("conspiracy", "conspiracy_enabled", send_conspiracy, settings.conspiracy_every_days, settings.conspiracy_time, [bot, settings, storage, llm, prompts]),
     )
-    for job_id, function, every_days, time_value, args in day_jobs:
+    for job_id, enabled_field, function, every_days, time_value, args in day_jobs:
+        if not _enabled(settings, enabled_field):
+            continue
         trigger = periodic_day_trigger(every_days, time_value, tz)
         if trigger is not None:
             scheduler.add_job(function, trigger, args=args, id=job_id)
 
-    scheduler.add_job(send_word_stats, CronTrigger(hour=word_stats_hour, minute=word_stats_minute, timezone=tz), args=[bot, settings, storage], id="word_stats")
-    if settings.random_image_every_minutes > 0:
+    if _enabled(settings, "word_stats_enabled"):
+        scheduler.add_job(send_word_stats, CronTrigger(hour=word_stats_hour, minute=word_stats_minute, timezone=tz), args=[bot, settings, storage], id="word_stats")
+    if _enabled(settings, "random_image_enabled") and settings.random_image_every_minutes > 0:
         scheduler.add_job(maybe_send_random_image, IntervalTrigger(minutes=settings.random_image_every_minutes, timezone=tz), args=[bot, settings], id="random_image")
-    if settings.roast_every_minutes > 0:
+    if _enabled(settings, "auto_bully_enabled") and settings.roast_every_minutes > 0:
         scheduler.add_job(maybe_send_roast, IntervalTrigger(minutes=settings.roast_every_minutes, timezone=tz), args=[bot, settings, storage, llm, prompts], id="roast")
-    if settings.alabuga_every_hours > 0:
+    if _enabled(settings, "alabuga_enabled") and settings.alabuga_every_hours > 0:
         scheduler.add_job(send_alabuga_news, IntervalTrigger(hours=settings.alabuga_every_hours, timezone=tz), args=[bot, settings, storage], id="alabuga")
 
 

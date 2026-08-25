@@ -17,11 +17,15 @@ class CommandDefinition:
     name: str
     description: str
     role: str = "admin"
+    aliases: tuple[str, ...] = ()
 
 
 COMMANDS = (
     CommandDefinition("start", "Проверить, что бот работает", "public"),
     CommandDefinition("commands", "Показать доступные команды", "public"),
+    CommandDefinition("bully", "Забуллить жертву", "public"),
+    CommandDefinition("word_stats_now", "Вывести статистику слов на данный момент", "public"),
+    CommandDefinition("alabuga", "Случайный пост Алабуга Политех", "public", ("alabuga_random",)),
     CommandDefinition("admin", "Открыть панель управления"),
     CommandDefinition("runtime_config", "Показать модели и параметры runtime"),
     CommandDefinition("forward_config", "Показать настройки Telegram forward"),
@@ -30,16 +34,28 @@ COMMANDS = (
     CommandDefinition("horoscope_now", "Сделать гороскоп сейчас"),
     CommandDefinition("joke_now", "Анекдот сейчас: a, b или random"),
     CommandDefinition("conspiracy_now", "Создать теорию заговора сейчас"),
-    CommandDefinition("bully", "Отправить bully-шаблон участнику"),
     CommandDefinition("bully_text", "Показать или изменить bully-текст"),
     CommandDefinition("bully_target", "Показать или изменить bully-цель"),
-    CommandDefinition("word_stats_now", "Показать статистику слов"),
-    CommandDefinition("alabuga_random", "Случайный пост Алабуга Политех"),
 )
 
 
 def available_commands(is_admin: bool) -> tuple[CommandDefinition, ...]:
     return tuple(command for command in COMMANDS if command.role == "public" or is_admin)
+
+
+def command_definition(command_name: str) -> CommandDefinition | None:
+    normalized = command_name.lstrip("/").split("@", 1)[0]
+    for command in COMMANDS:
+        if normalized == command.name or normalized in command.aliases:
+            return command
+    return None
+
+
+def can_use_command(command_name: str, is_admin: bool) -> bool:
+    command = command_definition(command_name)
+    if command is None:
+        return is_admin
+    return command.role == "public" or is_admin
 
 
 def telegram_commands(is_admin: bool) -> list[BotCommand]:
@@ -53,10 +69,10 @@ def commands_text(is_admin: bool) -> str:
     public = [command for command in available_commands(is_admin) if command.role == "public"]
     admin = [command for command in available_commands(is_admin) if command.role == "admin"]
     sections = ["<b>Доступные команды</b>", "", "<b>Для всех</b>"]
-    sections.extend(f"/{command.name} — {command.description}" for command in public)
+    sections.extend(f"/{command.name} - {command.description}" for command in public)
     if admin:
         sections.extend(("", "<b>Для администраторов</b>"))
-        sections.extend(f"/{command.name} — {command.description}" for command in admin)
+        sections.extend(f"/{command.name} - {command.description}" for command in admin)
     return "\n".join(sections)
 
 

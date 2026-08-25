@@ -8,6 +8,7 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot import prompts as default_prompts
 from bot.bully import DEFAULT_BULLY_MESSAGE_TEXT
+from bot.config import BOOLEAN_SETTING_KEYS
 from bot.env_file import read_env
 from setup_cli import DEFAULTS, QUESTIONS
 
@@ -48,6 +49,15 @@ FIELD_LABELS = {
     "DATABASE_PATH": "Путь к SQLite",
     "TRACKED_WORDS": "Отслеживаемые слова",
     "ANSWER_WEB_SEARCH_ENABLED": "Ответы · поиск в интернете",
+    "HOROSCOPE_ENABLED": "Автопостинг · гороскоп",
+    "SUMMARY_ENABLED": "Автопостинг · сводка",
+    "WORD_STATS_ENABLED": "Автопостинг · статистика слов",
+    "JOKE_A_ENABLED": "Автопостинг · Joke A",
+    "JOKE_B_ENABLED": "Автопостинг · Joke B",
+    "CONSPIRACY_ENABLED": "Автопостинг · теория заговора",
+    "RANDOM_IMAGE_ENABLED": "Автопостинг · случайные картинки",
+    "AUTO_BULLY_ENABLED": "Автопостинг · bully",
+    "ALABUGA_ENABLED": "Автопостинг · Алабуга",
     "JOKE_A_TIME": "Joke A · время отправки",
     "JOKE_A_EVERY_DAYS": "Joke A · интервал в днях",
     "JOKE_B_TIME": "Joke B · время отправки",
@@ -172,6 +182,20 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
             "TRACKED_WORDS",
         ],
     ),
+    "automations": (
+        "⏯ Автопостинг",
+        [
+            "HOROSCOPE_ENABLED",
+            "SUMMARY_ENABLED",
+            "WORD_STATS_ENABLED",
+            "JOKE_A_ENABLED",
+            "JOKE_B_ENABLED",
+            "CONSPIRACY_ENABLED",
+            "RANDOM_IMAGE_ENABLED",
+            "AUTO_BULLY_ENABLED",
+            "ALABUGA_ENABLED",
+        ],
+    ),
     "answer": ("💬 Ответы", []),
     "summary": ("📝 Сводка", []),
     "conspiracy": ("🕵️ Заговоры", []),
@@ -247,13 +271,17 @@ def admin_group_keyboard(group_key: str) -> InlineKeyboardMarkup:
 
 
 def admin_field_keyboard(key: str) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
+    rows = []
+    if key in BOOLEAN_SETTING_KEYS:
+        rows.append([InlineKeyboardButton(text="⏯ Переключить", callback_data=f"admin:toggle:{key}")])
+    rows.extend(
+        [
             [InlineKeyboardButton(text="Изменить", callback_data=f"admin:set:{key}")],
             [InlineKeyboardButton(text="Очистить", callback_data=f"admin:clear:{key}")],
             [InlineKeyboardButton(text="Назад", callback_data=f"admin:back:{group_for_key(key)}")],
         ]
     )
+    return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
 def group_for_key(key: str) -> str:

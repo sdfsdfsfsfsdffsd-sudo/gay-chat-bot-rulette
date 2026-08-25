@@ -83,6 +83,15 @@ class AnswerPipelineTests(unittest.TestCase):
             horoscope_model="horoscope/model",
             joke_model="joke/model",
             answer_web_search_enabled=True,
+            summary_enabled=True,
+            horoscope_enabled=False,
+            joke_a_enabled=True,
+            joke_b_enabled=True,
+            conspiracy_enabled=True,
+            word_stats_enabled=True,
+            random_image_enabled=True,
+            auto_bully_enabled=False,
+            alabuga_enabled=True,
             **{
                 f"{service}_params": SimpleNamespace(
                     temperature=0.85,
@@ -111,6 +120,7 @@ class AnswerPipelineTests(unittest.TestCase):
         self.assertIn("system_chars=28", text)
         self.assertIn("temperature=0.85", text)
         self.assertIn("answer_web_search_enabled=True", text)
+        self.assertIn("automations: summary=True | horoscope=False", text)
 
     def test_short_reply_prompt_is_short_answer_instruction(self) -> None:
         text = build_short_reply_answer_prompt("Ну и?")

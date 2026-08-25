@@ -69,6 +69,39 @@ class SchedulerTests(unittest.TestCase):
             {"summary", "conspiracy", "word_stats"},
         )
 
+    def test_configure_scheduler_respects_enabled_flags_without_losing_intervals(self) -> None:
+        settings = SimpleNamespace(
+            timezone="Europe/Warsaw",
+            word_stats_time="23:35",
+            horoscope_enabled=False,
+            horoscope_every_days=1,
+            horoscope_time="09:30",
+            summary_enabled=True,
+            summary_every_days=1,
+            daily_summary_time="18:00",
+            joke_a_enabled=False,
+            joke_a_every_days=1,
+            joke_a_time="12:00",
+            joke_b_enabled=True,
+            joke_b_every_days=1,
+            joke_b_time="18:00",
+            conspiracy_enabled=False,
+            conspiracy_every_days=3,
+            conspiracy_time="20:00",
+            word_stats_enabled=False,
+            random_image_enabled=False,
+            random_image_every_minutes=180,
+            auto_bully_enabled=False,
+            roast_every_minutes=240,
+            alabuga_enabled=False,
+            alabuga_every_hours=4,
+        )
+        scheduler = RecordingScheduler()
+
+        configure_scheduler(scheduler, object(), settings, object(), object(), object())
+
+        self.assertEqual({job["id"] for job in scheduler.jobs}, {"summary", "joke_b"})
+
 
 class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
     async def test_scheduled_joke_does_not_call_llm_without_bound_chat(self) -> None:

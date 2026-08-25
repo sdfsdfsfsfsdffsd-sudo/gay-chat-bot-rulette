@@ -47,6 +47,15 @@ TIME_SETTING_KEYS = {
 }
 BOOLEAN_SETTING_KEYS = {
     "ANSWER_WEB_SEARCH_ENABLED",
+    "HOROSCOPE_ENABLED",
+    "SUMMARY_ENABLED",
+    "WORD_STATS_ENABLED",
+    "JOKE_A_ENABLED",
+    "JOKE_B_ENABLED",
+    "CONSPIRACY_ENABLED",
+    "RANDOM_IMAGE_ENABLED",
+    "AUTO_BULLY_ENABLED",
+    "ALABUGA_ENABLED",
 }
 
 
@@ -92,6 +101,15 @@ class Settings:
     horoscope_model: str
     joke_model: str
     answer_web_search_enabled: bool
+    horoscope_enabled: bool
+    summary_enabled: bool
+    word_stats_enabled: bool
+    joke_a_enabled: bool
+    joke_b_enabled: bool
+    conspiracy_enabled: bool
+    random_image_enabled: bool
+    auto_bully_enabled: bool
+    alabuga_enabled: bool
     bot_chat_id: int | None
     admin_user_ids: set[int]
     telegram_user_api_id: int | None
@@ -317,6 +335,15 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         horoscope_model=horoscope_model,
         joke_model=joke_model,
         answer_web_search_enabled=_bool_value(get("ANSWER_WEB_SEARCH_ENABLED", "true"), True),
+        horoscope_enabled=_bool_value(get("HOROSCOPE_ENABLED", "true"), True),
+        summary_enabled=_bool_value(get("SUMMARY_ENABLED", "true"), True),
+        word_stats_enabled=_bool_value(get("WORD_STATS_ENABLED", "true"), True),
+        joke_a_enabled=_bool_value(get("JOKE_A_ENABLED", "true"), True),
+        joke_b_enabled=_bool_value(get("JOKE_B_ENABLED", "true"), True),
+        conspiracy_enabled=_bool_value(get("CONSPIRACY_ENABLED", "true"), True),
+        random_image_enabled=_bool_value(get("RANDOM_IMAGE_ENABLED", "true"), True),
+        auto_bully_enabled=_bool_value(get("AUTO_BULLY_ENABLED", "true"), True),
+        alabuga_enabled=_bool_value(get("ALABUGA_ENABLED", "true"), True),
         bot_chat_id=_optional_int(get("BOT_CHAT_ID", "")),
         admin_user_ids=_ints(get("ADMIN_USER_IDS", "")),
         telegram_user_api_id=_optional_int(get("TELEGRAM_USER_API_ID", "")),
