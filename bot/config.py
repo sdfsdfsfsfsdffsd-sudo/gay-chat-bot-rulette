@@ -16,21 +16,18 @@ MODEL_SETTING_FIELDS = {
     "SUMMARY_MODEL": "summary_model",
     "CONSPIRACY_MODEL": "conspiracy_model",
     "HOROSCOPE_MODEL": "horoscope_model",
-    "JOKE_MODEL": "joke_model",
 }
 
 DECIMAL_DAY_SETTING_KEYS = {
     "HOROSCOPE_EVERY_DAYS",
     "SUMMARY_EVERY_DAYS",
-    "JOKE_EVERY_DAYS",
     "JOKE_A_EVERY_DAYS",
     "JOKE_B_EVERY_DAYS",
     "CONSPIRACY_EVERY_DAYS",
 }
 NONNEGATIVE_INTEGER_SETTING_KEYS = {
     "ALABUGA_EVERY_HOURS",
-    "RANDOM_IMAGE_EVERY_MINUTES",
-    "ROAST_EVERY_MINUTES",
+    "BULLY_EVERY_MINUTES",
 }
 POSITIVE_INTEGER_SETTING_KEYS = {
     "SUMMARY_CONTEXT_HOURS",
@@ -41,7 +38,6 @@ TIME_SETTING_KEYS = {
     "HOROSCOPE_TIME",
     "DAILY_SUMMARY_TIME",
     "WORD_STATS_TIME",
-    "JOKE_TIME",
     "JOKE_A_TIME",
     "JOKE_B_TIME",
     "CONSPIRACY_TIME",
@@ -54,7 +50,6 @@ BOOLEAN_SETTING_KEYS = {
     "JOKE_A_ENABLED",
     "JOKE_B_ENABLED",
     "CONSPIRACY_ENABLED",
-    "RANDOM_IMAGE_ENABLED",
     "AUTO_BULLY_ENABLED",
     "ALABUGA_ENABLED",
 }
@@ -100,7 +95,6 @@ class Settings:
     summary_model: str
     conspiracy_model: str
     horoscope_model: str
-    joke_model: str
     answer_web_search_enabled: bool
     horoscope_enabled: bool
     summary_enabled: bool
@@ -108,7 +102,6 @@ class Settings:
     joke_a_enabled: bool
     joke_b_enabled: bool
     conspiracy_enabled: bool
-    random_image_enabled: bool
     auto_bully_enabled: bool
     alabuga_enabled: bool
     bot_chat_id: int | None
@@ -116,22 +109,16 @@ class Settings:
     telegram_user_api_id: int | None
     telegram_user_api_hash: str
     telegram_user_session: str
-    target_username: str | None
     bully_target_username: str | None
     timezone: str
     database_path: Path
-    local_image_dir: Path
-    image_source_channels: list[str]
     joke_source_urls: list[str]
     alabuga_channel_url: str
-    alabuga_jobs_url: str | None
     horoscope_time: str
     horoscope_every_days: float
     daily_summary_time: str
     summary_every_days: float
     word_stats_time: str
-    joke_time: str
-    joke_every_days: float
     joke_a_time: str
     joke_a_every_days: float
     joke_b_time: str
@@ -142,22 +129,16 @@ class Settings:
     horoscope_context_days: int
     conspiracy_context_days: int
     tracked_words: list[str]
-    random_image_every_minutes: int
-    random_image_probability: float
-    roast_every_minutes: int
-    roast_probability: float
+    bully_every_minutes: int
+    bully_probability: float
     bully_message_text: str
     conspiracy_every_days: float
     answer_params: GenerationParams
     summary_params: GenerationParams
     conspiracy_params: GenerationParams
     horoscope_params: GenerationParams
-    joke_params: GenerationParams
     system_prompt_path: Path | None
     horoscope_prompt_path: Path | None
-    joke_prompt_path: Path | None
-    joke_a_prompt_path: Path | None
-    joke_b_prompt_path: Path | None
     summary_prompt_path: Path | None
     conspiracy_prompt_path: Path | None
 
@@ -238,7 +219,11 @@ def _bool_value(value: str | None, default: bool = False) -> bool:
 
 
 def validate_setting_override(key: str, value: str) -> None:
-    if key in DECIMAL_DAY_SETTING_KEYS:
+    if key == "BULLY_PROBABILITY":
+        number = float(value)
+        if not isfinite(number) or not 0 <= number <= 1:
+            raise ValueError("Вероятность должна быть числом от 0 до 1.")
+    elif key in DECIMAL_DAY_SETTING_KEYS:
         number = float(value)
         if not isfinite(number) or number < 0:
             raise ValueError("Значение должно быть числом не меньше 0. Дробные дни разрешены: 0.5 = 12 часов.")
@@ -323,7 +308,6 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
     summary_model = _model_value(get("SUMMARY_MODEL", ""), quality_model)
     conspiracy_model = _model_value(get("CONSPIRACY_MODEL", ""), quality_model)
     horoscope_model = _model_value(get("HOROSCOPE_MODEL", ""), summary_model)
-    joke_model = _model_value(get("JOKE_MODEL", ""), default_model)
 
     return Settings(
         telegram_bot_token=token,
@@ -335,7 +319,6 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         summary_model=summary_model,
         conspiracy_model=conspiracy_model,
         horoscope_model=horoscope_model,
-        joke_model=joke_model,
         answer_web_search_enabled=_bool_value(get("ANSWER_WEB_SEARCH_ENABLED", "true"), True),
         horoscope_enabled=_bool_value(get("HOROSCOPE_ENABLED", "true"), True),
         summary_enabled=_bool_value(get("SUMMARY_ENABLED", "true"), True),
@@ -343,7 +326,6 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         joke_a_enabled=_bool_value(get("JOKE_A_ENABLED", "true"), True),
         joke_b_enabled=_bool_value(get("JOKE_B_ENABLED", "true"), True),
         conspiracy_enabled=_bool_value(get("CONSPIRACY_ENABLED", "true"), True),
-        random_image_enabled=_bool_value(get("RANDOM_IMAGE_ENABLED", "true"), True),
         auto_bully_enabled=_bool_value(get("AUTO_BULLY_ENABLED", "true"), True),
         alabuga_enabled=_bool_value(get("ALABUGA_ENABLED", "true"), True),
         bot_chat_id=_optional_int(get("BOT_CHAT_ID", "")),
@@ -351,22 +333,16 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         telegram_user_api_id=_optional_int(get("TELEGRAM_USER_API_ID", "")),
         telegram_user_api_hash=get("TELEGRAM_USER_API_HASH", "").strip(),
         telegram_user_session=get("TELEGRAM_USER_SESSION", "").strip(),
-        target_username=(get("TARGET_USERNAME", "") or "").strip().lstrip("@") or None,
         bully_target_username=(get("BULLY_TARGET_USERNAME", get("TARGET_USERNAME", "")) or "").strip().lstrip("@") or None,
         timezone=get("TIMEZONE", "Europe/Warsaw"),
         database_path=_storage_path(get, "DATABASE_PATH", "data/bot.sqlite3", "bot.sqlite3"),
-        local_image_dir=_storage_path(get, "LOCAL_IMAGE_DIR", "data/images", "images"),
-        image_source_channels=_csv(get("IMAGE_SOURCE_CHANNELS", "")),
         joke_source_urls=_csv(get("JOKE_SOURCE_URLS", ",".join(DEFAULT_JOKE_SOURCE_URLS))),
         alabuga_channel_url=get("ALABUGA_CHANNEL_URL", "https://t.me/s/alabugapolytech"),
-        alabuga_jobs_url=(get("ALABUGA_JOBS_URL", "") or "").strip() or None,
         horoscope_time=_time_value(get("HOROSCOPE_TIME", "09:30"), "09:30"),
         horoscope_every_days=_float_value(get("HOROSCOPE_EVERY_DAYS", "1"), 1.0),
         daily_summary_time=_time_value(get("DAILY_SUMMARY_TIME", "23:30"), "23:30"),
         summary_every_days=_float_value(get("SUMMARY_EVERY_DAYS", "1"), 1.0),
         word_stats_time=_time_value(get("WORD_STATS_TIME", get("DAILY_SUMMARY_TIME", "23:30")), "23:30"),
-        joke_time=_time_value(get("JOKE_TIME", "18:00"), "18:00"),
-        joke_every_days=_float_value(get("JOKE_EVERY_DAYS", "1"), 1.0),
         joke_a_time=_time_value(get("JOKE_A_TIME", get("JOKE_TIME", "12:00")), "12:00"),
         joke_a_every_days=_float_value(get("JOKE_A_EVERY_DAYS", get("JOKE_EVERY_DAYS", "1")), 1.0),
         joke_b_time=_time_value(get("JOKE_B_TIME", "18:00"), "18:00"),
@@ -377,10 +353,8 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         horoscope_context_days=_int_value(get("HOROSCOPE_CONTEXT_DAYS", "7"), 7),
         conspiracy_context_days=_int_value(get("CONSPIRACY_CONTEXT_DAYS", "3"), 3),
         tracked_words=_csv(get("TRACKED_WORDS", "")),
-        random_image_every_minutes=_int_value(get("RANDOM_IMAGE_EVERY_MINUTES", "180"), 180),
-        random_image_probability=_float_value(get("RANDOM_IMAGE_PROBABILITY", "0.35"), 0.35),
-        roast_every_minutes=_int_value(get("ROAST_EVERY_MINUTES", "240"), 240),
-        roast_probability=_float_value(get("ROAST_PROBABILITY", "0.25"), 0.25),
+        bully_every_minutes=_int_value(get("BULLY_EVERY_MINUTES", get("ROAST_EVERY_MINUTES", "240")), 240),
+        bully_probability=_float_value(get("BULLY_PROBABILITY", get("ROAST_PROBABILITY", "0.25")), 0.25),
         bully_message_text=get("BULLY_MESSAGE_TEXT", DEFAULT_BULLY_MESSAGE_TEXT).strip(),
         conspiracy_every_days=_float_value(get("CONSPIRACY_EVERY_DAYS", "3"), 3.0),
         answer_params=_generation_params("ANSWER", 0.7, get, 1800),
@@ -396,12 +370,8 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
             },
         ),
         horoscope_params=_generation_params("HOROSCOPE", 1.0, get),
-        joke_params=_generation_params("JOKE", 1.0, get),
         system_prompt_path=_optional_path(get("SYSTEM_PROMPT_PATH", "prompts/system.txt")),
         horoscope_prompt_path=_optional_path(get("HOROSCOPE_PROMPT_PATH", "prompts/horoscope.txt")),
-        joke_prompt_path=_optional_path(get("JOKE_PROMPT_PATH", "prompts/joke.txt")),
-        joke_a_prompt_path=_optional_path(get("JOKE_A_PROMPT_PATH", get("JOKE_PROMPT_PATH", "prompts/joke.txt"))),
-        joke_b_prompt_path=_optional_path(get("JOKE_B_PROMPT_PATH", "prompts/joke_b.txt")),
         summary_prompt_path=_optional_path(get("SUMMARY_PROMPT_PATH", "prompts/summary.txt")),
         conspiracy_prompt_path=_optional_path(get("CONSPIRACY_PROMPT_PATH", "prompts/conspiracy.txt")),
     )

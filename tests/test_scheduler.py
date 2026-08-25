@@ -10,7 +10,7 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from bot.jokes import JokeItem
-from bot.scheduler import _forward_or_send_feed_item, configure_scheduler, maybe_send_roast, periodic_day_trigger, send_joke
+from bot.scheduler import _forward_or_send_feed_item, configure_scheduler, maybe_send_bully, periodic_day_trigger, send_joke
 
 
 class RecordingScheduler:
@@ -49,16 +49,13 @@ class SchedulerTests(unittest.TestCase):
             horoscope_time="09:30",
             summary_every_days=1,
             daily_summary_time="18:00",
-            joke_every_days=0,
-            joke_time="19:00",
             joke_a_every_days=0,
             joke_a_time="12:00",
             joke_b_every_days=0,
             joke_b_time="18:00",
             conspiracy_every_days=3,
             conspiracy_time="20:00",
-            random_image_every_minutes=0,
-            roast_every_minutes=0,
+            bully_every_minutes=0,
             alabuga_every_hours=0,
         )
         scheduler = RecordingScheduler()
@@ -90,10 +87,8 @@ class SchedulerTests(unittest.TestCase):
             conspiracy_every_days=3,
             conspiracy_time="20:00",
             word_stats_enabled=False,
-            random_image_enabled=False,
-            random_image_every_minutes=180,
             auto_bully_enabled=False,
-            roast_every_minutes=240,
+            bully_every_minutes=240,
             alabuga_enabled=False,
             alabuga_every_hours=4,
         )
@@ -106,18 +101,8 @@ class SchedulerTests(unittest.TestCase):
 
 class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
     async def test_scheduled_joke_does_not_fetch_without_bound_chat(self) -> None:
-        class Llm:
-            async def generate_with_params(self, *args, **kwargs):
-                raise AssertionError("LLM must not be called without BOT_CHAT_ID")
-
-        with patch("bot.scheduler.sync_runtime_config", new=AsyncMock()), patch("bot.scheduler.fetch_random_joke", new=AsyncMock()) as fetch:
-            await send_joke(
-                object(),
-                SimpleNamespace(bot_chat_id=None),
-                object(),
-                Llm(),
-                SimpleNamespace(joke="prompt", joke_a="prompt a", joke_b="prompt b", joke_system="system"),
-            )
+        with patch("bot.scheduler.fetch_random_joke", new=AsyncMock()) as fetch:
+            await send_joke(object(), SimpleNamespace(bot_chat_id=None))
         fetch.assert_not_awaited()
 
     async def test_scheduled_joke_fetches_from_sources_without_llm(self) -> None:
@@ -125,51 +110,39 @@ class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
             async def send_message(self, chat_id, text, parse_mode=None):
                 self.sent = (chat_id, text, parse_mode)
 
-        class Llm:
-            async def generate_with_params(self, prompt, **kwargs):
-                raise AssertionError("Jokes must not call LLM")
-
         bot = Bot()
-        llm = Llm()
         settings = SimpleNamespace(
             bot_chat_id=123,
             joke_source_urls=["https://example.test/jokes"],
         )
-        prompts = SimpleNamespace(joke_a="prompt a", joke_b="prompt b", joke_system="")
-
-        with patch("bot.scheduler.sync_runtime_config", new=AsyncMock()), patch(
+        with patch(
             "bot.scheduler.fetch_random_joke",
             new=AsyncMock(return_value=JokeItem("generated joke", "https://example.test/jokes")),
         ) as fetch:
-            await send_joke(bot, settings, object(), llm, prompts, "b")
+            await send_joke(bot, settings, "b")
 
         fetch.assert_awaited_once_with(["https://example.test/jokes"])
         self.assertEqual(bot.sent, (123, "generated joke", "HTML"))
 
-    async def test_auto_roast_uses_static_bully_message_without_llm(self) -> None:
+    async def test_auto_bully_uses_static_message_without_llm(self) -> None:
         class Bot:
             async def send_message(self, chat_id, text, parse_mode=None):
                 self.sent = (chat_id, text, parse_mode)
 
-        class Llm:
-            async def generate_with_params(self, *args, **kwargs):
-                raise AssertionError("Bully must not call LLM")
-
         bot = Bot()
         settings = SimpleNamespace(
             bot_chat_id=123,
-            bully_target_username=None,
-            target_username="max",
-            roast_probability=1,
+            bully_target_username="max",
+            bully_probability=1,
             bully_message_text="Static {target} / {username}",
         )
 
         with patch("bot.scheduler.sync_runtime_config", new=AsyncMock()), patch("bot.scheduler.random.random", return_value=0):
-            await maybe_send_roast(bot, settings, object(), Llm(), object())
+            await maybe_send_bully(bot, settings, object(), object())
 
         self.assertEqual(bot.sent, (123, "Static @max / max", "HTML"))
 
-    async def test_auto_roast_prefers_configured_bully_target(self) -> None:
+    async def test_auto_bully_uses_configured_target(self) -> None:
         class Bot:
             async def send_message(self, chat_id, text, parse_mode=None):
                 self.sent = (chat_id, text, parse_mode)
@@ -177,13 +150,12 @@ class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
         settings = SimpleNamespace(
             bot_chat_id=123,
             bully_target_username="configured",
-            target_username="legacy",
-            roast_probability=1,
+            bully_probability=1,
             bully_message_text="{target}",
         )
 
         with patch("bot.scheduler.sync_runtime_config", new=AsyncMock()), patch("bot.scheduler.random.random", return_value=0):
-            await maybe_send_roast(bot := Bot(), settings, object(), object(), object())
+            await maybe_send_bully(bot := Bot(), settings, object(), object())
 
         self.assertEqual(bot.sent, (123, "@configured", "HTML"))
 

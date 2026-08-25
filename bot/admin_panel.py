@@ -8,90 +8,20 @@ from aiogram.types import InlineKeyboardButton, InlineKeyboardMarkup
 
 from bot import prompts as default_prompts
 from bot.bully import DEFAULT_BULLY_MESSAGE_TEXT
-from bot.config import BOOLEAN_SETTING_KEYS
+from bot.config import BOOLEAN_SETTING_KEYS, Settings
 from bot.env_file import read_env
 from setup_cli import DEFAULTS, QUESTIONS
 
 
 SECRET_KEYS = {"TELEGRAM_BOT_TOKEN", "OPENROUTER_API_KEY", "TELEGRAM_USER_API_HASH", "TELEGRAM_USER_SESSION"}
 PROMPT_TEXT_KEYS = {
-    "ANSWER_SYSTEM_PROMPT_TEXT": "Ответы · System prompt",
-    "SUMMARY_SYSTEM_PROMPT_TEXT": "Сводка · System prompt",
-    "CONSPIRACY_SYSTEM_PROMPT_TEXT": "Заговоры · System prompt",
-    "HOROSCOPE_SYSTEM_PROMPT_TEXT": "Гороскоп · System prompt",
-    "JOKE_SYSTEM_PROMPT_TEXT": "Анекдоты · System prompt",
-    "SUMMARY_PROMPT_TEXT": "Сводка · Основной промпт",
-    "CONSPIRACY_PROMPT_TEXT": "Заговоры · Основной промпт",
-    "HOROSCOPE_PROMPT_TEXT": "Гороскоп · Основной промпт",
-    "JOKE_PROMPT_TEXT": "Анекдоты · Основной промпт",
-    "JOKE_A_PROMPT_TEXT": "Joke A · Основной промпт",
-    "JOKE_B_PROMPT_TEXT": "Joke B · Основной промпт",
-}
-
-FIELD_LABELS = {
-    "TELEGRAM_BOT_TOKEN": "Токен Telegram-бота",
-    "OPENROUTER_API_KEY": "Ключ OpenRouter API",
-    "BOT_CHAT_ID": "Привязанный чат (Chat ID)",
-    "ADMIN_USER_IDS": "Администраторы (Telegram ID через запятую)",
-    "TELEGRAM_USER_API_ID": "Userbot · Telegram API ID",
-    "TELEGRAM_USER_API_HASH": "Userbot · Telegram API hash",
-    "TELEGRAM_USER_SESSION": "Userbot · StringSession",
-    "TARGET_USERNAME": "Участник для автоматического roast",
-    "BULLY_TARGET_USERNAME": "Bully · цель по умолчанию",
-    "TIMEZONE": "Часовой пояс",
-    "OPENROUTER_DEFAULT_MODEL": "Модель по умолчанию",
-    "OPENROUTER_QUALITY_MODEL": "Качественная модель",
-    "OPENROUTER_CHEAP_MODEL": "Экономичная модель",
-    "IMAGE_SOURCE_CHANNELS": "Каналы-источники изображений",
-    "ALABUGA_CHANNEL_URL": "Канал Алабуга Политех",
-    "ALABUGA_JOBS_URL": "Источник вакансий Алабуги",
-    "JOKE_SOURCE_URLS": "Источники анекдотов",
-    "LOCAL_IMAGE_DIR": "Каталог локальных изображений",
-    "DATABASE_PATH": "Путь к SQLite",
-    "TRACKED_WORDS": "Отслеживаемые слова",
-    "ANSWER_WEB_SEARCH_ENABLED": "Ответы · поиск в интернете",
-    "HOROSCOPE_ENABLED": "Автопостинг · гороскоп",
-    "SUMMARY_ENABLED": "Автопостинг · сводка",
-    "WORD_STATS_ENABLED": "Автопостинг · статистика слов",
-    "JOKE_A_ENABLED": "Автопостинг · Joke A",
-    "JOKE_B_ENABLED": "Автопостинг · Joke B",
-    "CONSPIRACY_ENABLED": "Автопостинг · теория заговора",
-    "RANDOM_IMAGE_ENABLED": "Автопостинг · случайные картинки",
-    "AUTO_BULLY_ENABLED": "Автопостинг · bully",
-    "ALABUGA_ENABLED": "Автопостинг · Алабуга",
-    "JOKE_A_TIME": "Joke A · время отправки",
-    "JOKE_A_EVERY_DAYS": "Joke A · интервал в днях",
-    "JOKE_B_TIME": "Joke B · время отправки",
-    "JOKE_B_EVERY_DAYS": "Joke B · интервал в днях",
-    "JOKE_A_PROMPT_PATH": "Joke A · файл промпта",
-    "JOKE_B_PROMPT_PATH": "Joke B · файл промпта",
-    "BULLY_MESSAGE_TEXT": "Bully · статичный текст",
-}
-
-SERVICE_LABELS = {
-    "ANSWER": "Ответы",
-    "SUMMARY": "Сводка",
-    "CONSPIRACY": "Заговоры",
-    "HOROSCOPE": "Гороскоп",
-    "JOKE": "Анекдоты",
-}
-
-PARAMETER_LABELS = {
-    "MODEL": "модель",
-    "TEMPERATURE": "температура",
-    "TOP_P": "Top P",
-    "TOP_K": "Top K",
-    "PRESENCE_PENALTY": "presence penalty",
-    "FREQUENCY_PENALTY": "frequency penalty",
-    "REPETITION_PENALTY": "repetition penalty",
-    "MIN_P": "Min P",
-    "TOP_A": "Top A",
-    "MAX_TOKENS": "максимум токенов",
-    "TIME": "время отправки",
-    "EVERY_DAYS": "интервал в днях",
-    "CONTEXT_DAYS": "контекст в днях",
-    "CONTEXT_HOURS": "контекст в часах",
-    "PROMPT_PATH": "файл промпта",
+    "ANSWER_SYSTEM_PROMPT_TEXT": "Системный промпт",
+    "SUMMARY_SYSTEM_PROMPT_TEXT": "Системный промпт",
+    "CONSPIRACY_SYSTEM_PROMPT_TEXT": "Системный промпт",
+    "HOROSCOPE_SYSTEM_PROMPT_TEXT": "Системный промпт",
+    "SUMMARY_PROMPT_TEXT": "Основной промпт",
+    "CONSPIRACY_PROMPT_TEXT": "Основной промпт",
+    "HOROSCOPE_PROMPT_TEXT": "Основной промпт",
 }
 
 PROMPT_FALLBACKS = {
@@ -99,13 +29,82 @@ PROMPT_FALLBACKS = {
     "SUMMARY_SYSTEM_PROMPT_TEXT": ("SYSTEM_PROMPT_PATH", default_prompts.SYSTEM_BASE),
     "CONSPIRACY_SYSTEM_PROMPT_TEXT": (None, ""),
     "HOROSCOPE_SYSTEM_PROMPT_TEXT": (None, ""),
-    "JOKE_SYSTEM_PROMPT_TEXT": (None, ""),
     "SUMMARY_PROMPT_TEXT": ("SUMMARY_PROMPT_PATH", default_prompts.SUMMARY_PROMPT),
     "CONSPIRACY_PROMPT_TEXT": ("CONSPIRACY_PROMPT_PATH", default_prompts.CONSPIRACY_PROMPT),
     "HOROSCOPE_PROMPT_TEXT": ("HOROSCOPE_PROMPT_PATH", default_prompts.HOROSCOPE_PROMPT),
-    "JOKE_PROMPT_TEXT": ("JOKE_PROMPT_PATH", default_prompts.JOKE_PROMPT),
-    "JOKE_A_PROMPT_TEXT": ("JOKE_A_PROMPT_PATH", default_prompts.JOKE_PROMPT),
-    "JOKE_B_PROMPT_TEXT": ("JOKE_B_PROMPT_PATH", default_prompts.JOKE_B_PROMPT),
+}
+
+FIELD_LABELS = {
+    "TELEGRAM_BOT_TOKEN": "Токен Telegram-бота",
+    "OPENROUTER_API_KEY": "Ключ OpenRouter",
+    "BOT_CHAT_ID": "Привязанный чат",
+    "ADMIN_USER_IDS": "Администраторы",
+    "TELEGRAM_USER_API_ID": "Telegram API ID",
+    "TELEGRAM_USER_API_HASH": "Telegram API hash",
+    "TELEGRAM_USER_SESSION": "Telegram StringSession",
+    "BULLY_TARGET_USERNAME": "Цель буллинга",
+    "BULLY_MESSAGE_TEXT": "Текст буллинга",
+    "BULLY_EVERY_MINUTES": "Интервал проверки",
+    "BULLY_PROBABILITY": "Вероятность отправки",
+    "TIMEZONE": "Часовой пояс",
+    "DATABASE_PATH": "Файл базы данных",
+    "OPENROUTER_DEFAULT_MODEL": "Модель по умолчанию",
+    "OPENROUTER_QUALITY_MODEL": "Качественная модель",
+    "OPENROUTER_CHEAP_MODEL": "Экономичная модель",
+    "ANSWER_MODEL": "Модель ответов",
+    "SUMMARY_MODEL": "Модель сводки",
+    "CONSPIRACY_MODEL": "Модель теорий заговора",
+    "HOROSCOPE_MODEL": "Модель гороскопа",
+    "ANSWER_WEB_SEARCH_ENABLED": "Поиск в интернете",
+    "HOROSCOPE_ENABLED": "Гороскоп",
+    "SUMMARY_ENABLED": "Сводка",
+    "WORD_STATS_ENABLED": "Статистика слов",
+    "JOKE_A_ENABLED": "Анекдот A",
+    "JOKE_B_ENABLED": "Анекдот B",
+    "CONSPIRACY_ENABLED": "Теория заговора",
+    "AUTO_BULLY_ENABLED": "Автоматический буллинг",
+    "ALABUGA_ENABLED": "Алабуга",
+    "JOKE_SOURCE_URLS": "Сайты с анекдотами",
+    "ALABUGA_CHANNEL_URL": "Канал Алабуга Политех",
+    "TRACKED_WORDS": "Отслеживаемые слова",
+    "HOROSCOPE_TIME": "Время отправки",
+    "HOROSCOPE_EVERY_DAYS": "Интервал в днях",
+    "DAILY_SUMMARY_TIME": "Время отправки",
+    "SUMMARY_EVERY_DAYS": "Интервал в днях",
+    "WORD_STATS_TIME": "Время отправки",
+    "JOKE_A_TIME": "Время анекдота A",
+    "JOKE_A_EVERY_DAYS": "Интервал анекдота A",
+    "JOKE_B_TIME": "Время анекдота B",
+    "JOKE_B_EVERY_DAYS": "Интервал анекдота B",
+    "CONSPIRACY_TIME": "Время отправки",
+    "CONSPIRACY_EVERY_DAYS": "Интервал в днях",
+    "ALABUGA_EVERY_HOURS": "Интервал в часах",
+    "SUMMARY_CONTEXT_HOURS": "Контекст в часах",
+    "HOROSCOPE_CONTEXT_DAYS": "Контекст в днях",
+    "CONSPIRACY_CONTEXT_DAYS": "Контекст в днях",
+    "SYSTEM_PROMPT_PATH": "Файл системного промпта сводки",
+    "SUMMARY_PROMPT_PATH": "Файл промпта сводки",
+    "CONSPIRACY_PROMPT_PATH": "Файл промпта теорий",
+    "HOROSCOPE_PROMPT_PATH": "Файл промпта гороскопа",
+}
+
+SERVICE_LABELS = {
+    "ANSWER": "Ответы",
+    "SUMMARY": "Сводка",
+    "CONSPIRACY": "Теория заговора",
+    "HOROSCOPE": "Гороскоп",
+}
+
+PARAMETER_LABELS = {
+    "TEMPERATURE": "Температура",
+    "TOP_P": "Top P",
+    "TOP_K": "Top K",
+    "PRESENCE_PENALTY": "Presence penalty",
+    "FREQUENCY_PENALTY": "Frequency penalty",
+    "REPETITION_PENALTY": "Repetition penalty",
+    "MIN_P": "Min P",
+    "TOP_A": "Top A",
+    "MAX_TOKENS": "Максимум токенов",
 }
 
 
@@ -114,109 +113,17 @@ class AdminField:
     key: str
     label: str
     secret: bool = False
+    editable: bool = True
 
 
-GROUPS: dict[str, tuple[str, list[str]]] = {
-    "main": (
-        "⚙️ Основное",
-        [
-            "TELEGRAM_BOT_TOKEN",
-            "OPENROUTER_API_KEY",
-            "BOT_CHAT_ID",
-            "ADMIN_USER_IDS",
-            "TELEGRAM_USER_API_ID",
-            "TELEGRAM_USER_API_HASH",
-            "TELEGRAM_USER_SESSION",
-            "TARGET_USERNAME",
-            "BULLY_TARGET_USERNAME",
-            "TIMEZONE",
-        ],
-    ),
-    "models": (
-        "🧠 Модели",
-        [
-            "OPENROUTER_DEFAULT_MODEL",
-            "OPENROUTER_QUALITY_MODEL",
-            "OPENROUTER_CHEAP_MODEL",
-            "ANSWER_MODEL",
-            "SUMMARY_MODEL",
-            "CONSPIRACY_MODEL",
-            "HOROSCOPE_MODEL",
-            "JOKE_MODEL",
-        ],
-    ),
-    "sources": (
-        "📡 Источники",
-        [
-            "IMAGE_SOURCE_CHANNELS",
-            "JOKE_SOURCE_URLS",
-            "ALABUGA_CHANNEL_URL",
-            "ALABUGA_JOBS_URL",
-            "LOCAL_IMAGE_DIR",
-            "DATABASE_PATH",
-        ],
-    ),
-    "schedule": (
-        "🕒 Расписание",
-        [
-            "HOROSCOPE_TIME",
-            "HOROSCOPE_EVERY_DAYS",
-            "DAILY_SUMMARY_TIME",
-            "SUMMARY_EVERY_DAYS",
-            "WORD_STATS_TIME",
-            "JOKE_TIME",
-            "JOKE_EVERY_DAYS",
-            "JOKE_A_TIME",
-            "JOKE_A_EVERY_DAYS",
-            "JOKE_B_TIME",
-            "JOKE_B_EVERY_DAYS",
-            "CONSPIRACY_TIME",
-            "CONSPIRACY_EVERY_DAYS",
-            "ALABUGA_EVERY_HOURS",
-            "SUMMARY_CONTEXT_HOURS",
-            "HOROSCOPE_CONTEXT_DAYS",
-            "CONSPIRACY_CONTEXT_DAYS",
-            "RANDOM_IMAGE_EVERY_MINUTES",
-            "RANDOM_IMAGE_PROBABILITY",
-            "ROAST_EVERY_MINUTES",
-            "ROAST_PROBABILITY",
-            "BULLY_MESSAGE_TEXT",
-            "TRACKED_WORDS",
-        ],
-    ),
-    "automations": (
-        "⏯ Автопостинг",
-        [
-            "HOROSCOPE_ENABLED",
-            "SUMMARY_ENABLED",
-            "WORD_STATS_ENABLED",
-            "JOKE_A_ENABLED",
-            "JOKE_B_ENABLED",
-            "CONSPIRACY_ENABLED",
-            "RANDOM_IMAGE_ENABLED",
-            "AUTO_BULLY_ENABLED",
-            "ALABUGA_ENABLED",
-        ],
-    ),
-    "answer": ("💬 Ответы", []),
-    "summary": ("📝 Сводка", []),
-    "conspiracy": ("🕵️ Заговоры", []),
-    "horoscope": ("🔮 Гороскоп", []),
-    "joke": ("🎭 Анекдоты", []),
-    "prompts": (
-        "📁 Файлы промптов",
-        [
-            "SYSTEM_PROMPT_PATH",
-            "SUMMARY_PROMPT_PATH",
-            "CONSPIRACY_PROMPT_PATH",
-            "HOROSCOPE_PROMPT_PATH",
-            "JOKE_PROMPT_PATH",
-            "JOKE_A_PROMPT_PATH",
-            "JOKE_B_PROMPT_PATH",
-        ],
-    ),
-    "prompt_texts": ("✍️ Тексты промптов", list(PROMPT_TEXT_KEYS)),
-}
+@dataclass(frozen=True)
+class AdminGroup:
+    title: str
+    description: str
+    fields: tuple[str, ...] = ()
+    children: tuple[str, ...] = ()
+    parent: str = "home"
+    toggle_dashboard: bool = False
 
 
 def field_label(key: str, fallback: str) -> str:
@@ -226,7 +133,7 @@ def field_label(key: str, fallback: str) -> str:
         marker = f"{prefix}_"
         if key.startswith(marker):
             suffix = key[len(marker):]
-            return f"{service_label} · {PARAMETER_LABELS.get(suffix, fallback)}"
+            return f"{service_label}: {PARAMETER_LABELS.get(suffix, fallback)}"
     return fallback
 
 
@@ -238,82 +145,265 @@ def _build_fields() -> dict[str, AdminField]:
         fallback = key.replace("_", " ").title()
         fields.setdefault(key, AdminField(key, field_label(key, fallback), key in SECRET_KEYS))
     for key, label in PROMPT_TEXT_KEYS.items():
-        fields.setdefault(key, AdminField(key, label, False))
+        fields[key] = AdminField(key, label)
+    if "DATABASE_PATH" in fields:
+        fields["DATABASE_PATH"] = AdminField("DATABASE_PATH", FIELD_LABELS["DATABASE_PATH"], editable=False)
     return fields
 
 
 FIELDS = _build_fields()
-for prefix in ("ANSWER", "SUMMARY", "CONSPIRACY", "HOROSCOPE", "JOKE"):
-    group_key = prefix.lower()
-    GROUPS[group_key] = (
-        GROUPS[group_key][0],
-        [key for key in FIELDS if key.startswith(f"{prefix}_")],
+
+
+def _sampling(prefix: str) -> tuple[str, ...]:
+    suffixes = (
+        "TEMPERATURE", "TOP_P", "TOP_K", "PRESENCE_PENALTY", "FREQUENCY_PENALTY",
+        "REPETITION_PENALTY", "MIN_P", "TOP_A", "MAX_TOKENS",
     )
+    return tuple(key for suffix in suffixes if (key := f"{prefix}_{suffix}") in FIELDS)
 
 
-def admin_home_keyboard() -> InlineKeyboardMarkup:
+GROUPS: dict[str, AdminGroup] = {
+    "automations": AdminGroup(
+        "📅 Автопубликации",
+        "Нажатие сразу включает или приостанавливает задачу. Расписание при этом сохраняется.",
+        fields=(
+            "SUMMARY_ENABLED", "HOROSCOPE_ENABLED", "WORD_STATS_ENABLED", "JOKE_A_ENABLED",
+            "JOKE_B_ENABLED", "CONSPIRACY_ENABLED", "AUTO_BULLY_ENABLED", "ALABUGA_ENABLED",
+        ),
+        toggle_dashboard=True,
+    ),
+    "features": AdminGroup(
+        "🧩 Функции",
+        "Настройка поведения, расписания и содержания каждой функции.",
+        children=("answer", "summary", "horoscope", "conspiracy", "jokes", "bully", "word_stats", "alabuga"),
+    ),
+    "integrations": AdminGroup(
+        "🔌 Подключения",
+        "Ключи сервисов, Telegram-пересылка и внешние источники.",
+        children=("telegram", "openrouter", "forwarding", "sources"),
+    ),
+    "access": AdminGroup(
+        "👥 Доступ и чат",
+        "Кто управляет ботом и в какой чат отправляются автоматические публикации.",
+        fields=("BOT_CHAT_ID", "ADMIN_USER_IDS"),
+    ),
+    "advanced": AdminGroup(
+        "🛠 Расширенные",
+        "Редко используемые системные настройки и файловые fallback-промпты.",
+        fields=("TIMEZONE", "DATABASE_PATH"),
+        children=("fallback_models", "prompt_files"),
+    ),
+    "answer": AdminGroup(
+        "💬 Ответы на вопросы",
+        "Модель, поиск в интернете и стиль обычных ответов.",
+        fields=("ANSWER_MODEL", "ANSWER_WEB_SEARCH_ENABLED", "ANSWER_SYSTEM_PROMPT_TEXT"),
+        children=("answer_generation",),
+        parent="features",
+    ),
+    "summary": AdminGroup(
+        "📝 Сводка",
+        "Ежедневная сводка по сообщениям чата.",
+        fields=("SUMMARY_ENABLED", "DAILY_SUMMARY_TIME", "SUMMARY_EVERY_DAYS", "SUMMARY_CONTEXT_HOURS", "SUMMARY_MODEL", "SUMMARY_PROMPT_TEXT", "SUMMARY_SYSTEM_PROMPT_TEXT"),
+        children=("summary_generation",),
+        parent="features",
+    ),
+    "horoscope": AdminGroup(
+        "🔮 Гороскоп",
+        "Персональный гороскоп для активных участников.",
+        fields=("HOROSCOPE_ENABLED", "HOROSCOPE_TIME", "HOROSCOPE_EVERY_DAYS", "HOROSCOPE_CONTEXT_DAYS", "HOROSCOPE_MODEL", "HOROSCOPE_PROMPT_TEXT", "HOROSCOPE_SYSTEM_PROMPT_TEXT"),
+        children=("horoscope_generation",),
+        parent="features",
+    ),
+    "conspiracy": AdminGroup(
+        "🕵️ Теория заговора",
+        "Теория по контексту чата и его участникам.",
+        fields=("CONSPIRACY_ENABLED", "CONSPIRACY_TIME", "CONSPIRACY_EVERY_DAYS", "CONSPIRACY_CONTEXT_DAYS", "CONSPIRACY_MODEL", "CONSPIRACY_PROMPT_TEXT", "CONSPIRACY_SYSTEM_PROMPT_TEXT"),
+        children=("conspiracy_generation",),
+        parent="features",
+    ),
+    "jokes": AdminGroup(
+        "🎭 Анекдоты",
+        "Два независимых расписания. Анекдоты берутся с сайтов, LLM не используется.",
+        fields=("JOKE_A_ENABLED", "JOKE_A_TIME", "JOKE_A_EVERY_DAYS", "JOKE_B_ENABLED", "JOKE_B_TIME", "JOKE_B_EVERY_DAYS", "JOKE_SOURCE_URLS"),
+        parent="features",
+    ),
+    "bully": AdminGroup(
+        "🎯 Буллинг",
+        "Статичный текст, цель и частота автоматической отправки.",
+        fields=("AUTO_BULLY_ENABLED", "BULLY_TARGET_USERNAME", "BULLY_MESSAGE_TEXT", "BULLY_EVERY_MINUTES", "BULLY_PROBABILITY"),
+        parent="features",
+    ),
+    "word_stats": AdminGroup(
+        "📊 Статистика слов",
+        "Ежедневный подсчёт заданных слов по участникам.",
+        fields=("WORD_STATS_ENABLED", "WORD_STATS_TIME", "TRACKED_WORDS"),
+        parent="features",
+    ),
+    "alabuga": AdminGroup(
+        "📡 Алабуга",
+        "Автоматическая пересылка публикаций канала.",
+        fields=("ALABUGA_ENABLED", "ALABUGA_EVERY_HOURS", "ALABUGA_CHANNEL_URL"),
+        parent="features",
+    ),
+    "telegram": AdminGroup("🤖 Telegram-бот", "Основной токен Telegram Bot API.", fields=("TELEGRAM_BOT_TOKEN",), parent="integrations"),
+    "openrouter": AdminGroup("🧠 OpenRouter", "API-ключ для AI-функций.", fields=("OPENROUTER_API_KEY",), parent="integrations"),
+    "forwarding": AdminGroup("📨 Telegram-пересылка", "Данные userbot для настоящего forward из каналов.", fields=("TELEGRAM_USER_API_ID", "TELEGRAM_USER_API_HASH", "TELEGRAM_USER_SESSION"), parent="integrations"),
+    "sources": AdminGroup("🌐 Внешние источники", "Ссылки на каналы и сайты, откуда бот берёт публикации.", fields=("ALABUGA_CHANNEL_URL", "JOKE_SOURCE_URLS"), parent="integrations"),
+    "fallback_models": AdminGroup("🧠 Резервные модели", "Модели, используемые как fallback для сервисов.", fields=("OPENROUTER_DEFAULT_MODEL", "OPENROUTER_QUALITY_MODEL", "OPENROUTER_CHEAP_MODEL"), parent="advanced"),
+    "prompt_files": AdminGroup("📁 Файлы промптов", "Используются, только если текст промпта не задан через админку.", fields=("SYSTEM_PROMPT_PATH", "SUMMARY_PROMPT_PATH", "CONSPIRACY_PROMPT_PATH", "HOROSCOPE_PROMPT_PATH"), parent="advanced"),
+    "answer_generation": AdminGroup("🎛 Параметры ответов", "Тонкая настройка генерации. Меняй только если понимаешь влияние параметров.", fields=_sampling("ANSWER"), parent="answer"),
+    "summary_generation": AdminGroup("🎛 Параметры сводки", "Тонкая настройка генерации сводки.", fields=_sampling("SUMMARY"), parent="summary"),
+    "horoscope_generation": AdminGroup("🎛 Параметры гороскопа", "Тонкая настройка генерации гороскопа.", fields=_sampling("HOROSCOPE"), parent="horoscope"),
+    "conspiracy_generation": AdminGroup("🎛 Параметры теорий", "Тонкая настройка генерации теорий заговора.", fields=_sampling("CONSPIRACY"), parent="conspiracy"),
+}
+
+HOME_GROUPS = ("automations", "features", "integrations", "access", "advanced")
+
+
+def _enabled(settings: Settings | None, key: str) -> bool:
+    if settings is not None:
+        return bool(getattr(settings, key.lower(), False))
+    raw = read_env().get(key, DEFAULTS.get(key, "false"))
+    return raw.strip().lower() in {"1", "true", "yes", "y", "on", "да"}
+
+
+def _runtime_value(settings: Settings | None, attr: str, key: str) -> str:
+    if settings is not None and hasattr(settings, attr):
+        return str(getattr(settings, attr))
+    return DEFAULTS.get(key, "")
+
+
+def _days_label(value: str, time_value: str) -> str:
+    try:
+        days = float(value)
+    except ValueError:
+        days = 1
+    if days == 1:
+        return f"ежедневно {time_value}"
+    return f"раз в {days:g} дн. · {time_value}"
+
+
+def automation_detail(settings: Settings | None, key: str) -> str:
+    if key == "SUMMARY_ENABLED":
+        return _days_label(_runtime_value(settings, "summary_every_days", "SUMMARY_EVERY_DAYS"), _runtime_value(settings, "daily_summary_time", "DAILY_SUMMARY_TIME"))
+    if key == "HOROSCOPE_ENABLED":
+        return _days_label(_runtime_value(settings, "horoscope_every_days", "HOROSCOPE_EVERY_DAYS"), _runtime_value(settings, "horoscope_time", "HOROSCOPE_TIME"))
+    if key == "WORD_STATS_ENABLED":
+        return f"ежедневно {_runtime_value(settings, 'word_stats_time', 'WORD_STATS_TIME')}"
+    if key == "JOKE_A_ENABLED":
+        return _days_label(_runtime_value(settings, "joke_a_every_days", "JOKE_A_EVERY_DAYS"), _runtime_value(settings, "joke_a_time", "JOKE_A_TIME"))
+    if key == "JOKE_B_ENABLED":
+        return _days_label(_runtime_value(settings, "joke_b_every_days", "JOKE_B_EVERY_DAYS"), _runtime_value(settings, "joke_b_time", "JOKE_B_TIME"))
+    if key == "CONSPIRACY_ENABLED":
+        return _days_label(_runtime_value(settings, "conspiracy_every_days", "CONSPIRACY_EVERY_DAYS"), _runtime_value(settings, "conspiracy_time", "CONSPIRACY_TIME"))
+    if key == "AUTO_BULLY_ENABLED":
+        return f"каждые {_runtime_value(settings, 'bully_every_minutes', 'BULLY_EVERY_MINUTES')} мин."
+    if key == "ALABUGA_ENABLED":
+        return f"каждые {_runtime_value(settings, 'alabuga_every_hours', 'ALABUGA_EVERY_HOURS')} ч."
+    return ""
+
+
+def admin_home_keyboard(settings: Settings | None = None) -> InlineKeyboardMarkup:
+    rows = [
+        [InlineKeyboardButton(text=GROUPS["automations"].title, callback_data="admin:g:automations"), InlineKeyboardButton(text=GROUPS["features"].title, callback_data="admin:g:features")],
+        [InlineKeyboardButton(text=GROUPS["integrations"].title, callback_data="admin:g:integrations"), InlineKeyboardButton(text=GROUPS["access"].title, callback_data="admin:g:access")],
+        [InlineKeyboardButton(text=GROUPS["advanced"].title, callback_data="admin:g:advanced")],
+        [InlineKeyboardButton(text="✖ Закрыть", callback_data="admin:close")],
+    ]
+    return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def admin_group_keyboard(group_key: str, settings: Settings | None = None) -> InlineKeyboardMarkup:
+    group = GROUPS[group_key]
     rows: list[list[InlineKeyboardButton]] = []
-    current_row: list[InlineKeyboardButton] = []
-    for group_key, (title, _) in GROUPS.items():
-        current_row.append(InlineKeyboardButton(text=title, callback_data=f"admin:g:{group_key}"))
-        if len(current_row) == 2:
-            rows.append(current_row)
-            current_row = []
-    if current_row:
-        rows.append(current_row)
-    rows.append([InlineKeyboardButton(text="Закрыть", callback_data="admin:close")])
+    if group.children:
+        current: list[InlineKeyboardButton] = []
+        for child_key in group.children:
+            current.append(InlineKeyboardButton(text=GROUPS[child_key].title, callback_data=f"admin:g:{child_key}"))
+            if len(current) == 2:
+                rows.append(current)
+                current = []
+        if current:
+            rows.append(current)
+    for key in group.fields:
+        if key not in FIELDS:
+            continue
+        if group.toggle_dashboard:
+            status = "✅" if _enabled(settings, key) else "⛔"
+            detail = automation_detail(settings, key)
+            rows.append([InlineKeyboardButton(text=f"{status} {FIELDS[key].label} · {detail}", callback_data=f"admin:toggle:{key}:{group_key}")])
+        else:
+            label = FIELDS[key].label
+            if key in BOOLEAN_SETTING_KEYS:
+                label = f"{'✅' if _enabled(settings, key) else '⛔'} {label}"
+            rows.append([InlineKeyboardButton(text=label, callback_data=f"admin:f:{key}:{group_key}")])
+    rows.append([
+        InlineKeyboardButton(text="← Назад", callback_data=f"admin:g:{group.parent}" if group.parent != "home" else "admin:home"),
+        InlineKeyboardButton(text="⌂ Главная", callback_data="admin:home"),
+    ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
 
 
-def admin_group_keyboard(group_key: str) -> InlineKeyboardMarkup:
-    _, keys = GROUPS[group_key]
-    rows = [[InlineKeyboardButton(text=FIELDS[key].label, callback_data=f"admin:f:{key}")] for key in keys if key in FIELDS]
-    rows.append([InlineKeyboardButton(text="Назад", callback_data="admin:home")])
-    return InlineKeyboardMarkup(inline_keyboard=rows)
-
-
-def admin_field_keyboard(key: str) -> InlineKeyboardMarkup:
-    rows = []
+def admin_field_keyboard(key: str, return_group: str | None = None, settings: Settings | None = None) -> InlineKeyboardMarkup:
+    return_group = return_group if return_group in GROUPS else group_for_key(key)
+    rows: list[list[InlineKeyboardButton]] = []
     if key in BOOLEAN_SETTING_KEYS:
-        rows.append([InlineKeyboardButton(text="⏯ Переключить", callback_data=f"admin:toggle:{key}")])
-    rows.extend(
-        [
-            [InlineKeyboardButton(text="Изменить", callback_data=f"admin:set:{key}")],
-            [InlineKeyboardButton(text="Очистить", callback_data=f"admin:clear:{key}")],
-            [InlineKeyboardButton(text="Назад", callback_data=f"admin:back:{group_for_key(key)}")],
-        ]
-    )
+        action = "Выключить" if _enabled(settings, key) else "Включить"
+        rows.append([InlineKeyboardButton(text=f"⏯ {action}", callback_data=f"admin:toggle_field:{key}:{return_group}")])
+        rows.append([InlineKeyboardButton(text="↩️ Вернуть стандартное", callback_data=f"admin:clear:{key}:{return_group}")])
+    elif FIELDS[key].editable:
+        rows.append([InlineKeyboardButton(text="✏️ Изменить", callback_data=f"admin:set:{key}:{return_group}")])
+        rows.append([InlineKeyboardButton(text="↩️ Вернуть стандартное", callback_data=f"admin:clear:{key}:{return_group}")])
+    rows.append([
+        InlineKeyboardButton(text="← Назад", callback_data=f"admin:g:{return_group}"),
+        InlineKeyboardButton(text="⌂ Главная", callback_data="admin:home"),
+    ])
     return InlineKeyboardMarkup(inline_keyboard=rows)
+
+
+def admin_clear_keyboard(key: str, return_group: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Да, вернуть стандартное", callback_data=f"admin:cc:{key}:{return_group}")],
+        [InlineKeyboardButton(text="Отмена", callback_data=f"admin:f:{key}:{return_group}")],
+    ])
+
+
+def admin_cancel_keyboard(key: str, return_group: str) -> InlineKeyboardMarkup:
+    return InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Отмена", callback_data=f"admin:x:{key}:{return_group}")],
+    ])
 
 
 def group_for_key(key: str) -> str:
-    for group_key, (_, keys) in GROUPS.items():
-        if key in keys:
+    for group_key, group in GROUPS.items():
+        if key in group.fields and not group.toggle_dashboard:
             return group_key
-    return "main"
+    return "advanced"
 
 
 def display_value(key: str, value: str) -> str:
     if not value:
-        return "<пусто>"
+        return "не задано"
     if FIELDS[key].secret:
         return value[:4] + "..." + value[-4:] if len(value) > 8 else "***"
-    return value if len(value) <= 500 else value[:497] + "..."
+    return value if len(value) <= 700 else value[:697] + "..."
 
 
-def admin_home_text() -> str:
+def admin_home_text(settings: Settings | None = None) -> str:
+    enabled = sum(_enabled(settings, key) for key in GROUPS["automations"].fields)
+    total = len(GROUPS["automations"].fields)
+    chat_status = "подключён" if settings and settings.has_bound_chat else "не подключён"
     return (
-        "<b>⚙️ Панель управления</b>\n\n"
-        "Выбери раздел, затем нужный параметр.\n\n"
-        "<b>Как применяются изменения</b>\n"
-        "Значения сохраняются в SQLite и применяются сразу, без перезапуска. "
-        "Конфигурация из <code>.env</code> используется как резервная."
+        "<b>⚙️ Управление ботом</b>\n\n"
+        f"💬 Чат: <b>{chat_status}</b>\n"
+        f"📅 Автопубликации: <b>{enabled} из {total}</b> включены\n\n"
+        "Выбери, что хочешь настроить. Изменения применяются сразу и сохраняются в базе."
     )
 
 
 def admin_group_text(group_key: str) -> str:
-    title, _ = GROUPS[group_key]
-    return f"<b>{html.escape(title)}</b>\n\nВыбери параметр для просмотра или изменения."
+    group = GROUPS[group_key]
+    return f"<b>{html.escape(group.title)}</b>\n\n{html.escape(group.description)}"
 
 
 def admin_field_text(
@@ -326,42 +416,43 @@ def admin_field_text(
     if key in PROMPT_TEXT_KEYS:
         if key in (prompt_overrides or {}):
             value = (prompt_overrides or {})[key]
-            source = "admin prompt storage"
+            source = "задано через админку"
         else:
             path_key, fallback = PROMPT_FALLBACKS[key]
             path_value = env.get(path_key, DEFAULTS.get(path_key, "")) if path_key else ""
             path = Path(path_value) if path_value else None
             value = path.read_text(encoding="utf-8").strip() if path and path.exists() else fallback.strip()
-            source = "prompt file/default"
+            source = "файл или встроенное значение"
     elif key in (setting_overrides or {}):
         value = (setting_overrides or {})[key]
-        source = "admin settings storage"
+        source = "задано через админку"
     else:
         value = env.get(key, DEFAULTS.get(key, DEFAULT_BULLY_MESSAGE_TEXT if key == "BULLY_MESSAGE_TEXT" else ""))
-        source = ".env/default"
+        source = ".env или встроенное значение"
+    shown = display_value(key, value)
+    status = ""
+    if key in BOOLEAN_SETTING_KEYS:
+        status = f"\n\n<b>Состояние:</b> {'✅ включено' if shown.lower() in {'true', '1', 'yes', 'on', 'да'} else '⛔ выключено'}"
+    edit_hint = "" if not field.editable or key in BOOLEAN_SETTING_KEYS else "\n\nНажми «Изменить» и отправь новое значение."
     return (
-        f"<b>⚙️ {html.escape(field.label)}</b>\n"
-        f"<code>{html.escape(key)}</code>\n\n"
-        f"<b>Источник</b>\n<code>{html.escape(source)}</code>\n\n"
-        f"<b>Текущее значение</b>\n<code>{html.escape(display_value(key, value))}</code>\n\n"
-        "Нажми «Изменить» и отправь новое значение следующим сообщением."
+        f"<b>⚙️ {html.escape(field.label)}</b>"
+        f"{status}\n\n"
+        f"<b>Текущее значение</b>\n<code>{html.escape(shown)}</code>\n\n"
+        f"<i>Источник: {html.escape(source)}</i>{edit_hint}"
     )
 
 
 def admin_set_prompt_text(key: str) -> str:
     field = FIELDS[key]
-    hint = (
-        "\n\n<b>Формат:</b> Telegram ID через запятую.\n"
-        "Пример: <code>123456789, 987654321</code>"
-        if key == "ADMIN_USER_IDS"
-        else ""
-    )
+    hints = {
+        "ADMIN_USER_IDS": "Telegram ID через запятую, например: <code>123456789, 987654321</code>",
+        "BULLY_PROBABILITY": "Число от 0 до 1, например <code>0.25</code>.",
+        "BULLY_MESSAGE_TEXT": "Можно использовать <code>{target}</code> и <code>{username}</code>.",
+    }
+    hint = f"\n\n<b>Подсказка:</b> {hints[key]}" if key in hints else ""
     return (
-        f"<b>✏️ Изменение параметра</b>\n\n"
-        f"<b>{html.escape(field.label)}</b>\n"
-        f"Ключ: <code>{html.escape(key)}</code>"
+        f"<b>✏️ {html.escape(field.label)}</b>\n\n"
+        "Отправь новое значение следующим сообщением."
         f"{hint}\n\n"
-        "Отправь новое значение одним сообщением.\n"
-        "Очистить override: <code>-</code>\n"
-        "Отменить изменение: <code>/cancel</code>"
+        "Для отмены нажми кнопку ниже или напиши <code>/cancel</code>."
     )

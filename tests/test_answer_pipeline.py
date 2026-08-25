@@ -15,7 +15,7 @@ from bot.handlers import (
     build_runtime_config_text,
     clean_question_text,
     command_argument,
-    format_roast_target,
+    format_bully_target,
 )
 
 
@@ -70,10 +70,10 @@ class AnswerPipelineTests(unittest.TestCase):
         self.assertEqual(command_argument("/bully @max"), "@max")
         self.assertEqual(command_argument("/bully"), "")
 
-    def test_format_roast_target(self) -> None:
-        self.assertEqual(format_roast_target("@max"), "@max")
-        self.assertEqual(format_roast_target("maxim_user"), "@maxim_user")
-        self.assertEqual(format_roast_target("Max Fullname"), "Max Fullname")
+    def test_format_bully_target(self) -> None:
+        self.assertEqual(format_bully_target("@max"), "@max")
+        self.assertEqual(format_bully_target("maxim_user"), "@maxim_user")
+        self.assertEqual(format_bully_target("Max Fullname"), "Max Fullname")
 
     def test_runtime_config_text_shows_effective_model_and_prompt_hash(self) -> None:
         settings = SimpleNamespace(
@@ -81,7 +81,6 @@ class AnswerPipelineTests(unittest.TestCase):
             summary_model="summary/model",
             conspiracy_model="new/conspiracy-model",
             horoscope_model="horoscope/model",
-            joke_model="joke/model",
             answer_web_search_enabled=True,
             summary_enabled=True,
             horoscope_enabled=False,
@@ -89,7 +88,6 @@ class AnswerPipelineTests(unittest.TestCase):
             joke_b_enabled=True,
             conspiracy_enabled=True,
             word_stats_enabled=True,
-            random_image_enabled=True,
             auto_bully_enabled=False,
             alabuga_enabled=True,
             **{
@@ -102,7 +100,7 @@ class AnswerPipelineTests(unittest.TestCase):
                     repetition_penalty=None,
                     max_tokens=900,
                 )
-                for service in ("answer", "summary", "conspiracy", "horoscope", "joke")
+                for service in ("answer", "summary", "conspiracy", "horoscope")
             },
         )
         prompts = SimpleNamespace(
@@ -110,7 +108,6 @@ class AnswerPipelineTests(unittest.TestCase):
             summary_system="",
             conspiracy_system="new conspiracy system prompt",
             horoscope_system="",
-            joke_system="",
         )
 
         text = build_runtime_config_text(settings, prompts)

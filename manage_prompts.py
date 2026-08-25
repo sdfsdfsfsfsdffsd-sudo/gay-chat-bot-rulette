@@ -11,7 +11,6 @@ PROMPTS = {
     "summary": ("SUMMARY_PROMPT_PATH", "Daily summary prompt", default_prompts.SUMMARY_PROMPT),
     "conspiracy": ("CONSPIRACY_PROMPT_PATH", "Conspiracy prompt", default_prompts.CONSPIRACY_PROMPT),
     "horoscope": ("HOROSCOPE_PROMPT_PATH", "Horoscope prompt", default_prompts.HOROSCOPE_PROMPT),
-    "joke": ("JOKE_PROMPT_PATH", "Joke prompt", default_prompts.JOKE_PROMPT),
 }
 
 

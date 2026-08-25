@@ -5,7 +5,6 @@ import logging
 from datetime import datetime, timedelta
 
 from aiogram import Bot
-from aiogram.types import FSInputFile
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
@@ -20,8 +19,6 @@ from bot.prompt_loader import PromptSet
 from bot.runtime_config import sync_runtime_config
 from bot.sources import (
     fetch_latest_unsent_telegram_item,
-    random_channel_image_url,
-    random_local_image,
 )
 from bot.storage import Storage
 from bot.telegram_format import normalize_telegram_html
@@ -125,12 +122,8 @@ async def send_summary(bot: Bot, settings: Settings, storage: Storage, llm: Open
 async def send_joke(
     bot: Bot,
     settings: Settings,
-    storage: Storage,
-    llm: OpenRouterClient,
-    prompts: PromptSet,
     joke_type: str = "a",
 ) -> None:
-    await sync_runtime_config(settings, prompts, storage)
     if settings.bot_chat_id is None:
         return
     joke = await fetch_random_joke(settings.joke_source_urls)
@@ -140,24 +133,12 @@ async def send_joke(
     await _send_text(bot, settings.bot_chat_id, format_joke_html(joke), parse_mode="HTML")
 
 
-async def maybe_send_random_image(bot: Bot, settings: Settings) -> None:
-    if settings.bot_chat_id is None or random.random() > settings.random_image_probability:
-        return
-    local = random_local_image(settings.local_image_dir)
-    if local and random.random() < 0.65:
-        await bot.send_photo(settings.bot_chat_id, FSInputFile(local))
-        return
-    remote = await random_channel_image_url(settings.image_source_channels)
-    if remote:
-        await bot.send_photo(settings.bot_chat_id, remote)
-
-
-async def maybe_send_roast(bot: Bot, settings: Settings, storage: Storage, llm: OpenRouterClient, prompts: PromptSet) -> None:
+async def maybe_send_bully(bot: Bot, settings: Settings, storage: Storage, prompts: PromptSet) -> None:
     await sync_runtime_config(settings, prompts, storage)
-    target_username = settings.bully_target_username or settings.target_username
+    target_username = settings.bully_target_username
     if settings.bot_chat_id is None or not target_username:
         return
-    if random.random() > settings.roast_probability:
+    if random.random() > settings.bully_probability:
         return
     target = f"@{target_username}"
     text = render_bully_message(settings.bully_message_text, target)
@@ -214,8 +195,8 @@ def configure_scheduler(
     day_jobs = (
         ("horoscope", "horoscope_enabled", send_horoscope, settings.horoscope_every_days, settings.horoscope_time, [bot, settings, storage, llm, prompts]),
         ("summary", "summary_enabled", send_summary, settings.summary_every_days, settings.daily_summary_time, [bot, settings, storage, llm, prompts]),
-        ("joke_a", "joke_a_enabled", send_joke, settings.joke_a_every_days, settings.joke_a_time, [bot, settings, storage, llm, prompts, "a"]),
-        ("joke_b", "joke_b_enabled", send_joke, settings.joke_b_every_days, settings.joke_b_time, [bot, settings, storage, llm, prompts, "b"]),
+        ("joke_a", "joke_a_enabled", send_joke, settings.joke_a_every_days, settings.joke_a_time, [bot, settings, "a"]),
+        ("joke_b", "joke_b_enabled", send_joke, settings.joke_b_every_days, settings.joke_b_time, [bot, settings, "b"]),
         ("conspiracy", "conspiracy_enabled", send_conspiracy, settings.conspiracy_every_days, settings.conspiracy_time, [bot, settings, storage, llm, prompts]),
     )
     for job_id, enabled_field, function, every_days, time_value, args in day_jobs:
@@ -227,10 +208,8 @@ def configure_scheduler(
 
     if _enabled(settings, "word_stats_enabled"):
         scheduler.add_job(send_word_stats, CronTrigger(hour=word_stats_hour, minute=word_stats_minute, timezone=tz), args=[bot, settings, storage], id="word_stats")
-    if _enabled(settings, "random_image_enabled") and settings.random_image_every_minutes > 0:
-        scheduler.add_job(maybe_send_random_image, IntervalTrigger(minutes=settings.random_image_every_minutes, timezone=tz), args=[bot, settings], id="random_image")
-    if _enabled(settings, "auto_bully_enabled") and settings.roast_every_minutes > 0:
-        scheduler.add_job(maybe_send_roast, IntervalTrigger(minutes=settings.roast_every_minutes, timezone=tz), args=[bot, settings, storage, llm, prompts], id="roast")
+    if _enabled(settings, "auto_bully_enabled") and settings.bully_every_minutes > 0:
+        scheduler.add_job(maybe_send_bully, IntervalTrigger(minutes=settings.bully_every_minutes, timezone=tz), args=[bot, settings, storage, prompts], id="bully")
     if _enabled(settings, "alabuga_enabled") and settings.alabuga_every_hours > 0:
         scheduler.add_job(send_alabuga_news, IntervalTrigger(hours=settings.alabuga_every_hours, timezone=tz), args=[bot, settings, storage], id="alabuga")
 

@@ -7,6 +7,7 @@ import logging
 import random
 import re
 from collections.abc import Awaitable, Callable
+from dataclasses import dataclass
 
 from aiogram import Bot, Router
 from aiogram.filters import Command
@@ -14,6 +15,8 @@ from aiogram.types import CallbackQuery, Message
 
 from bot.admin_panel import (
     FIELDS,
+    admin_cancel_keyboard,
+    admin_clear_keyboard,
     admin_field_keyboard,
     admin_field_text,
     admin_group_keyboard,
@@ -109,10 +112,10 @@ def build_runtime_config_text(settings: Settings, prompts: PromptSet) -> str:
         f"summary={settings.summary_enabled} | horoscope={settings.horoscope_enabled} | "
         f"joke_a={settings.joke_a_enabled} | joke_b={settings.joke_b_enabled} | "
         f"conspiracy={settings.conspiracy_enabled} | word_stats={settings.word_stats_enabled} | "
-        f"random_image={settings.random_image_enabled} | bully={settings.auto_bully_enabled} | "
+        f"bully={settings.auto_bully_enabled} | "
         f"alabuga={settings.alabuga_enabled}"
     )
-    for service in ("answer", "summary", "conspiracy", "horoscope", "joke"):
+    for service in ("answer", "summary", "conspiracy", "horoscope"):
         model = getattr(settings, f"{service}_model")
         system_prompt = getattr(prompts, f"{service}_system").strip()
         fingerprint = (
@@ -133,7 +136,7 @@ def build_runtime_config_text(settings: Settings, prompts: PromptSet) -> str:
     return "\n".join(rows)
 
 
-def format_roast_target(value: str) -> str:
+def format_bully_target(value: str) -> str:
     value = value.strip()
     if not value:
         return ""
@@ -142,6 +145,14 @@ def format_roast_target(value: str) -> str:
     if re.fullmatch(r"[A-Za-z0-9_]{5,}", value):
         return f"@{value}"
     return value
+
+
+@dataclass(frozen=True)
+class PendingAdminUpdate:
+    key: str
+    return_group: str
+    menu_chat_id: int
+    menu_message_id: int
 
 
 def build_router(
@@ -155,7 +166,7 @@ def build_router(
 ) -> Router:
     router = Router()
     active_questions: dict[int, asyncio.Lock] = {}
-    pending_admin_updates: dict[int, str] = {}
+    pending_admin_updates: dict[tuple[int, int], PendingAdminUpdate] = {}
 
     def is_admin_user(user_id: int | None) -> bool:
         if not settings.admin_user_ids:
@@ -200,7 +211,8 @@ def build_router(
     async def admin(message: Message) -> None:
         if not is_admin(message):
             return
-        await message.answer(admin_home_text(), reply_markup=admin_home_keyboard(), parse_mode="HTML")
+        await sync_runtime_config(settings, prompts, storage)
+        await message.answer(admin_home_text(settings), reply_markup=admin_home_keyboard(settings), parse_mode="HTML")
 
     @router.message(Command("runtime_config"))
     async def runtime_config(message: Message) -> None:
@@ -237,99 +249,144 @@ def build_router(
             return
 
         data = callback.data or ""
-        parts = data.split(":", 2)
+        parts = data.split(":")
         action = parts[1] if len(parts) > 1 else ""
         value = parts[2] if len(parts) > 2 else ""
+        return_group = parts[3] if len(parts) > 3 and parts[3] in GROUPS else ""
 
         if action == "home":
-            await callback.message.edit_text(admin_home_text(), reply_markup=admin_home_keyboard(), parse_mode="HTML")
+            await sync_runtime_config(settings, prompts, storage)
+            await callback.message.edit_text(admin_home_text(settings), reply_markup=admin_home_keyboard(settings), parse_mode="HTML")
         elif action == "g" and value in GROUPS:
-            await callback.message.edit_text(admin_group_text(value), reply_markup=admin_group_keyboard(value), parse_mode="HTML")
+            await sync_runtime_config(settings, prompts, storage)
+            await callback.message.edit_text(admin_group_text(value), reply_markup=admin_group_keyboard(value, settings), parse_mode="HTML")
         elif action == "f" and value in FIELDS:
             await callback.message.edit_text(
                 await field_text(value),
-                reply_markup=admin_field_keyboard(value),
+                reply_markup=admin_field_keyboard(value, return_group, settings),
                 parse_mode="HTML",
             )
         elif action == "set" and value in FIELDS:
-            pending_admin_updates[callback.from_user.id] = value
-            await callback.message.answer(admin_set_prompt_text(value), parse_mode="HTML")
-        elif action == "toggle" and value in FIELDS and value in BOOLEAN_SETTING_KEYS:
+            group_key = return_group or "advanced"
+            pending_admin_updates[(callback.from_user.id, callback.message.chat.id)] = PendingAdminUpdate(
+                key=value,
+                return_group=group_key,
+                menu_chat_id=callback.message.chat.id,
+                menu_message_id=callback.message.message_id,
+            )
+            await callback.message.edit_text(
+                admin_set_prompt_text(value),
+                reply_markup=admin_cancel_keyboard(value, group_key),
+                parse_mode="HTML",
+            )
+        elif action in {"toggle", "toggle_field"} and value in FIELDS and value in BOOLEAN_SETTING_KEYS:
             await sync_runtime_config(settings, prompts, storage)
             current = bool(getattr(settings, value.lower(), True))
             await storage.set_setting_override(value, "false" if current else "true")
             await refresh_runtime_config()
+            if action == "toggle" and return_group in GROUPS:
+                await callback.message.edit_text(
+                    admin_group_text(return_group),
+                    reply_markup=admin_group_keyboard(return_group, settings),
+                    parse_mode="HTML",
+                )
+            else:
+                await callback.message.edit_text(
+                    await field_text(value),
+                    reply_markup=admin_field_keyboard(value, return_group, settings),
+                    parse_mode="HTML",
+                )
+        elif action == "clear" and value in FIELDS:
+            group_key = return_group or "advanced"
             await callback.message.edit_text(
-                await field_text(value),
-                reply_markup=admin_field_keyboard(value),
+                f"<b>Вернуть стандартное значение?</b>\n\n{html.escape(FIELDS[value].label)} будет снова брать значение из .env или встроенных настроек.",
+                reply_markup=admin_clear_keyboard(value, group_key),
                 parse_mode="HTML",
             )
-            await callback.message.answer("Готово: переключил и применил без перезапуска.")
-        elif action == "clear" and value in FIELDS:
+        elif action == "cc" and value in FIELDS:
             if value in PROMPT_TEXT_KEYS:
                 await storage.clear_prompt_override(value)
-                message_text = "Prompt override очищен в SQLite и применён в runtime."
             else:
                 await storage.clear_setting_override(value)
-                message_text = "Setting override очищен в SQLite. Теперь используется fallback из .env/default."
             await refresh_runtime_config()
             await callback.message.edit_text(
                 await field_text(value),
-                reply_markup=admin_field_keyboard(value),
+                reply_markup=admin_field_keyboard(value, return_group, settings),
                 parse_mode="HTML",
             )
-            await callback.message.answer(message_text)
-        elif action == "back" and value in GROUPS:
-            await callback.message.edit_text(admin_group_text(value), reply_markup=admin_group_keyboard(value), parse_mode="HTML")
+        elif action == "x" and value in FIELDS:
+            pending_admin_updates.pop((callback.from_user.id, callback.message.chat.id), None)
+            await callback.message.edit_text(
+                await field_text(value),
+                reply_markup=admin_field_keyboard(value, return_group, settings),
+                parse_mode="HTML",
+            )
         elif action == "close":
+            pending_admin_updates.pop((callback.from_user.id, callback.message.chat.id), None)
             await callback.message.edit_text("Админка закрыта.")
+        else:
+            await callback.message.edit_text(admin_home_text(settings), reply_markup=admin_home_keyboard(settings), parse_mode="HTML")
+            await callback.answer("Меню обновилось. Открыл актуальную главную.", show_alert=True)
+            return
         await callback.answer()
 
-    @router.message(lambda message: bool(message.from_user and message.from_user.id in pending_admin_updates))
-    async def admin_update_value(message: Message) -> None:
+    @router.message(
+        lambda message: bool(
+            message.text is not None
+            and message.from_user
+            and (message.from_user.id, message.chat.id) in pending_admin_updates
+        )
+    )
+    async def admin_update_value(message: Message, bot: Bot) -> None:
         if not is_admin(message):
             return
         user_id = message.from_user.id
-        key = pending_admin_updates.pop(user_id)
+        pending_key = (user_id, message.chat.id)
+        pending = pending_admin_updates[pending_key]
+        key = pending.key
         value = (message.text or "").strip()
         if value == "/cancel":
-            await message.answer("Изменение отменено.")
+            pending_admin_updates.pop(pending_key, None)
+            await bot.edit_message_text(
+                await field_text(key),
+                chat_id=pending.menu_chat_id,
+                message_id=pending.menu_message_id,
+                reply_markup=admin_field_keyboard(key, pending.return_group, settings),
+                parse_mode="HTML",
+            )
             return
         if value == "-":
             value = ""
         if key in PROMPT_TEXT_KEYS:
             if value:
                 await storage.set_prompt_override(key, value)
-                action_text = "Saved prompt override in SQLite."
             else:
                 await storage.clear_prompt_override(key)
-                action_text = "Cleared prompt override in SQLite."
-            await refresh_runtime_config()
-            await message.answer(
-                f"{action_text}\nKey: <code>{key}</code>\n"
-                "Applied in runtime.",
-                parse_mode="HTML",
-            )
         else:
             if value:
                 try:
                     validate_setting_override(key, value)
                 except (ValueError, OverflowError) as error:
-                    await message.answer(
-                        f"Некорректное значение для {key}: {error}",
+                    await bot.edit_message_text(
+                        f"{admin_set_prompt_text(key)}\n\n<b>Ошибка:</b> {html.escape(str(error))}\nПопробуй ещё раз.",
+                        chat_id=pending.menu_chat_id,
+                        message_id=pending.menu_message_id,
+                        reply_markup=admin_cancel_keyboard(key, pending.return_group),
+                        parse_mode="HTML",
                     )
                     return
                 await storage.set_setting_override(key, value)
-                action_text = "Saved setting override in SQLite."
             else:
                 await storage.clear_setting_override(key)
-                action_text = "Cleared setting override in SQLite. Runtime now uses .env/default fallback."
-            await refresh_runtime_config()
-            await message.answer(
-                f"{action_text}\nKey: <code>{key}</code>\n"
-                "Applied in runtime.",
-                parse_mode="HTML",
-            )
+        pending_admin_updates.pop(pending_key, None)
+        await refresh_runtime_config()
+        await bot.edit_message_text(
+            f"✅ <b>Сохранено</b>\n\n{await field_text(key)}",
+            chat_id=pending.menu_chat_id,
+            message_id=pending.menu_message_id,
+            reply_markup=admin_field_keyboard(key, pending.return_group, settings),
+            parse_mode="HTML",
+        )
 
     @router.message(Command("bind_chat"))
     async def bind_chat(message: Message) -> None:
@@ -438,9 +495,9 @@ def build_router(
         if arg.lower() == "random":
             target = random.choice(participants) if participants else ""
         elif arg:
-            target = format_roast_target(arg)
-        elif settings.bully_target_username or settings.target_username:
-            target = format_roast_target(settings.bully_target_username or settings.target_username or "")
+            target = format_bully_target(arg)
+        elif settings.bully_target_username:
+            target = format_bully_target(settings.bully_target_username)
         else:
             target = ""
 
@@ -491,7 +548,7 @@ def build_router(
         await sync_runtime_config(settings, prompts, storage)
         value = command_argument(message.text).strip().lstrip("@")
         if not value:
-            current = settings.bully_target_username or settings.target_username or ""
+            current = settings.bully_target_username or ""
             await message.answer(
                 "<b>Текущая bully-цель</b>\n"
                 f"<code>{html.escape('@' + current if current else '<не задано>')}</code>\n\n"

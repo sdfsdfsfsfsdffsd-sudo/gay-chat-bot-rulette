@@ -44,7 +44,6 @@ class ConfigTests(unittest.TestCase):
             settings = load_settings()
 
         self.assertEqual(settings.database_path, Path("/app/data/bot.sqlite3"))
-        self.assertEqual(settings.local_image_dir, Path("/app/data/images"))
 
     def test_explicit_storage_paths_override_railway_volume(self) -> None:
         env = {
@@ -52,13 +51,11 @@ class ConfigTests(unittest.TestCase):
             "OPENROUTER_API_KEY": "key",
             "RAILWAY_VOLUME_MOUNT_PATH": "/app/data",
             "DATABASE_PATH": "/custom/db.sqlite3",
-            "LOCAL_IMAGE_DIR": "/custom/images",
         }
         with patch.dict(os.environ, env, clear=True), patch("bot.config.load_dotenv"):
             settings = load_settings()
 
         self.assertEqual(settings.database_path, Path("/custom/db.sqlite3"))
-        self.assertEqual(settings.local_image_dir, Path("/custom/images"))
 
     def test_horoscope_model_falls_back_to_summary_model(self) -> None:
         env = {
@@ -72,21 +69,6 @@ class ConfigTests(unittest.TestCase):
 
         self.assertEqual(settings.summary_model, "deepseek/deepseek-chat")
         self.assertEqual(settings.horoscope_model, "deepseek/deepseek-chat")
-
-    def test_joke_model_falls_back_to_uncensored_default_model(self) -> None:
-        env = {
-            "TELEGRAM_BOT_TOKEN": "token",
-            "OPENROUTER_API_KEY": "key",
-            "OPENROUTER_DEFAULT_MODEL": "cognitivecomputations/dolphin-mistral-24b-venice-edition",
-            "JOKE_MODEL": "",
-        }
-        with patch.dict(os.environ, env, clear=True), patch("bot.config.load_dotenv"):
-            settings = load_settings()
-
-        self.assertEqual(
-            settings.joke_model,
-            "cognitivecomputations/dolphin-mistral-24b-venice-edition",
-        )
 
     def test_schedule_and_context_settings_can_be_overridden(self) -> None:
         overrides = {
@@ -129,40 +111,40 @@ class ConfigTests(unittest.TestCase):
         overrides = {
             "TELEGRAM_BOT_TOKEN": "token",
             "OPENROUTER_API_KEY": "key",
-            "JOKE_EVERY_DAYS": "0.5",
+            "BULLY_EVERY_MINUTES": "120",
+            "BULLY_PROBABILITY": "0.4",
         }
         with patch.dict(os.environ, {}, clear=True), patch("bot.config.load_dotenv"):
             settings = load_settings(overrides)
 
-        self.assertEqual(settings.joke_every_days, 0.5)
+        self.assertEqual(settings.bully_every_minutes, 120)
+        self.assertEqual(settings.bully_probability, 0.4)
 
     def test_invalid_persisted_numbers_do_not_prevent_startup(self) -> None:
         overrides = {
             "TELEGRAM_BOT_TOKEN": "token",
             "OPENROUTER_API_KEY": "key",
-            "JOKE_EVERY_DAYS": "not-a-number",
-            "JOKE_TEMPERATURE": "also-invalid",
-            "JOKE_TOP_K": "0.5",
-            "JOKE_TIME": "99:70",
+            "BULLY_EVERY_MINUTES": "not-a-number",
+            "BULLY_PROBABILITY": "also-invalid",
         }
         with patch.dict(os.environ, {}, clear=True), patch("bot.config.load_dotenv"):
             settings = load_settings(overrides)
 
-        self.assertEqual(settings.joke_every_days, 1.0)
-        self.assertEqual(settings.joke_params.temperature, 1.0)
-        self.assertIsNone(settings.joke_params.top_k)
-        self.assertEqual(settings.joke_time, "18:00")
+        self.assertEqual(settings.bully_every_minutes, 240)
+        self.assertEqual(settings.bully_probability, 0.25)
 
     def test_admin_setting_validation_accepts_half_day_and_rejects_bad_time(self) -> None:
-        validate_setting_override("JOKE_EVERY_DAYS", "0.5")
         validate_setting_override("JOKE_A_EVERY_DAYS", "0.5")
         validate_setting_override("JOKE_B_TIME", "18:30")
         validate_setting_override("ANSWER_WEB_SEARCH_ENABLED", "true")
         validate_setting_override("ALABUGA_ENABLED", "false")
+        validate_setting_override("BULLY_PROBABILITY", "0.25")
         with self.assertRaises(ValueError):
-            validate_setting_override("JOKE_TIME", "25:00")
+            validate_setting_override("JOKE_B_TIME", "25:00")
         with self.assertRaises(ValueError):
             validate_setting_override("ANSWER_WEB_SEARCH_ENABLED", "maybe")
+        with self.assertRaises(ValueError):
+            validate_setting_override("BULLY_PROBABILITY", "1.2")
 
     def test_conspiracy_defaults_favor_coherent_output(self) -> None:
         overrides = {

@@ -1,7 +1,7 @@
 # Telegram Chat Bot
 
-Python bot for a Telegram group chat: horoscopes, daily summaries, random images,
-playful roasts, jokes, absurd conspiracy posts, and configurable Alabuga news.
+Python bot for a Telegram group chat: horoscopes, daily summaries, static playful
+bullying, website jokes, absurd conspiracy posts, and configurable Alabuga news.
 
 ## Security first
 
@@ -23,12 +23,11 @@ The setup script asks for:
 - Telegram bot token;
 - OpenRouter API key;
 - target chat id or admin ids;
-- public Telegram channels/URLs for image sources;
-- Alabuga channel/jobs URL;
+- Alabuga channel and joke source URLs;
 - schedule times and timezone.
 
 If you do not know the group chat id yet, start the bot, add it to the group, and
-send `/bind_chat`. Put the returned id into `.env` as `BOT_CHAT_ID`, then restart.
+send `/bind_chat`. The chat id is saved in SQLite and applied immediately.
 
 ## Configuration
 
@@ -45,7 +44,6 @@ ANSWER_MODEL=cognitivecomputations/dolphin-mistral-24b-venice-edition
 SUMMARY_MODEL=deepseek/deepseek-chat
 CONSPIRACY_MODEL=deepseek/deepseek-chat
 HOROSCOPE_MODEL=
-JOKE_MODEL=cognitivecomputations/dolphin-mistral-24b-venice-edition
 ANSWER_WEB_SEARCH_ENABLED=true
 HOROSCOPE_ENABLED=true
 SUMMARY_ENABLED=true
@@ -53,15 +51,13 @@ WORD_STATS_ENABLED=true
 JOKE_A_ENABLED=true
 JOKE_B_ENABLED=true
 CONSPIRACY_ENABLED=true
-RANDOM_IMAGE_ENABLED=true
 AUTO_BULLY_ENABLED=true
 ALABUGA_ENABLED=true
 ```
 
 Per-feature model ids are shown in `/admin` and can be changed without restart.
 Empty `HOROSCOPE_MODEL` means the bot uses `SUMMARY_MODEL`.
-`JOKE_MODEL` is kept for backward-compatible settings, but joke sending now
-uses parsed website sources instead of the LLM.
+Jokes use parsed website sources and therefore have no model or sampling settings.
 
 ## Schedule And Context
 
@@ -105,8 +101,16 @@ mention/private questions. Reply-to-bot short answers and chat-context answers
 do not use web search.
 
 The `*_ENABLED` flags pause/resume scheduled background posts without changing
-their interval or time settings. In `/admin`, open `Автопостинг`, choose a task,
-and press `Переключить`.
+their interval or time settings. In `/admin`, open `Автопубликации` and tap a
+task; its button immediately changes between `✅` and `⛔`.
+
+The admin panel is organized by tasks rather than environment keys:
+
+- `Автопубликации` shows all live on/off states;
+- `Функции` contains behavior, schedule, prompts, and per-service models;
+- `Подключения` contains Telegram, OpenRouter, forwarding, and sources;
+- `Доступ и чат` contains the bound chat and administrator ids;
+- `Расширенные` contains fallback models, prompt files, timezone, and diagnostics.
 
 ## Prompts
 
@@ -119,25 +123,20 @@ SYSTEM_PROMPT_PATH=prompts/system.txt
 SUMMARY_PROMPT_PATH=prompts/summary.txt
 CONSPIRACY_PROMPT_PATH=prompts/conspiracy.txt
 HOROSCOPE_PROMPT_PATH=prompts/horoscope.txt
-JOKE_PROMPT_PATH=prompts/joke.txt
-JOKE_A_PROMPT_PATH=prompts/joke.txt
-JOKE_B_PROMPT_PATH=prompts/joke_b.txt
 ```
 
 The Telegram admin panel can also write direct prompt overrides into the bot database.
 Prompt priority is: admin prompt override, then prompt file path from effective settings, then built-in default.
-Joke prompt settings are legacy-compatible; `/joke_now` and scheduled Joke A/B
-now fetch random jokes from `JOKE_SOURCE_URLS` instead of generating them.
 
 System prompts are configured independently per service in `/admin`:
 `ANSWER_SYSTEM_PROMPT_TEXT`, `SUMMARY_SYSTEM_PROMPT_TEXT`,
-`CONSPIRACY_SYSTEM_PROMPT_TEXT`, `HOROSCOPE_SYSTEM_PROMPT_TEXT`,
-and `JOKE_SYSTEM_PROMPT_TEXT`. They are stored in SQLite and applied
+`CONSPIRACY_SYSTEM_PROMPT_TEXT`, and `HOROSCOPE_SYSTEM_PROMPT_TEXT`. They are stored in SQLite and applied
 immediately without changing `.env` or restarting the bot.
 
 `/bully` does not call the LLM. It uses `BULLY_MESSAGE_TEXT` from `/admin`
 or `.env`; the template supports `{target}` and `{username}`. The default
-target is `BULLY_TARGET_USERNAME`, falling back to the older `TARGET_USERNAME`.
+target is `BULLY_TARGET_USERNAME`. Old `TARGET_USERNAME` and `ROAST_*` values
+are migrated automatically to the current `BULLY_*` settings.
 Quick commands:
 
 ```text
@@ -167,7 +166,6 @@ CONSPIRACY_TOP_P=0.95
 CONSPIRACY_PRESENCE_PENALTY=0
 CONSPIRACY_FREQUENCY_PENALTY=0.05
 HOROSCOPE_TEMPERATURE=1.0
-JOKE_TEMPERATURE=1.0
 ```
 
 Admin prompt overrides are applied at runtime. Prompt file path changes from
@@ -198,34 +196,14 @@ ADMIN_USER_IDS=<comma-separated Telegram user ids>
 ```
 
 Attach a Railway Volume at `/app/data`. Without it the bot can start, but the
-SQLite database, admin-panel overrides, message history, and uploaded local
-images are lost when Railway replaces the deployment. Railway provides the
-mount location as `RAILWAY_VOLUME_MOUNT_PATH`; the bot automatically stores the
-database at `<mount>/bot.sqlite3` and images at `<mount>/images`. Explicit
-`DATABASE_PATH` and `LOCAL_IMAGE_DIR` values still take priority when set.
+SQLite database, admin-panel overrides, and message history are lost when
+Railway replaces the deployment. Railway provides the mount location as
+`RAILWAY_VOLUME_MOUNT_PATH`; the bot automatically stores the database at
+`<mount>/bot.sqlite3`. An explicit `DATABASE_PATH` still takes priority.
 
 If Railway still reports `No start command detected`, check the deployment's
 commit SHA and source branch. A deployment containing `railway.json` uses the
 Dockerfile builder and therefore never reaches Railpack start-command detection.
-
-## Image Sources
-
-Local images go into:
-
-```text
-data/images
-```
-
-Public Telegram image sources are comma-separated:
-
-```env
-IMAGE_SOURCE_CHANNELS=@channel1,https://t.me/s/channel2
-```
-
-Bot API cannot read arbitrary private channel history by `channel_id`. Public
-channels are fetched through `t.me/s/...`. For private channels, add a future
-Telethon/user-session integration or forward posts to a channel where the bot can
-receive them.
 
 ## Commands
 
