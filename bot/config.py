@@ -9,6 +9,7 @@ from typing import Callable
 from dotenv import load_dotenv
 
 from bot.bully import DEFAULT_BULLY_MESSAGE_TEXT
+from bot.jokes import DEFAULT_JOKE_SOURCE_URLS
 
 MODEL_SETTING_FIELDS = {
     "ANSWER_MODEL": "answer_model",
@@ -121,6 +122,7 @@ class Settings:
     database_path: Path
     local_image_dir: Path
     image_source_channels: list[str]
+    joke_source_urls: list[str]
     alabuga_channel_url: str
     alabuga_jobs_url: str | None
     horoscope_time: str
@@ -355,6 +357,7 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         database_path=_storage_path(get, "DATABASE_PATH", "data/bot.sqlite3", "bot.sqlite3"),
         local_image_dir=_storage_path(get, "LOCAL_IMAGE_DIR", "data/images", "images"),
         image_source_channels=_csv(get("IMAGE_SOURCE_CHANNELS", "")),
+        joke_source_urls=_csv(get("JOKE_SOURCE_URLS", ",".join(DEFAULT_JOKE_SOURCE_URLS))),
         alabuga_channel_url=get("ALABUGA_CHANNEL_URL", "https://t.me/s/alabugapolytech"),
         alabuga_jobs_url=(get("ALABUGA_JOBS_URL", "") or "").strip() or None,
         horoscope_time=_time_value(get("HOROSCOPE_TIME", "09:30"), "09:30"),

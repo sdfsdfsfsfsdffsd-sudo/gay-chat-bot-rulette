@@ -9,6 +9,7 @@ from zoneinfo import ZoneInfo
 from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
+from bot.jokes import JokeItem
 from bot.scheduler import _forward_or_send_feed_item, configure_scheduler, maybe_send_roast, periodic_day_trigger, send_joke
 
 
@@ -104,12 +105,12 @@ class SchedulerTests(unittest.TestCase):
 
 
 class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
-    async def test_scheduled_joke_does_not_call_llm_without_bound_chat(self) -> None:
+    async def test_scheduled_joke_does_not_fetch_without_bound_chat(self) -> None:
         class Llm:
             async def generate_with_params(self, *args, **kwargs):
                 raise AssertionError("LLM must not be called without BOT_CHAT_ID")
 
-        with patch("bot.scheduler.sync_runtime_config", new=AsyncMock()):
+        with patch("bot.scheduler.sync_runtime_config", new=AsyncMock()), patch("bot.scheduler.fetch_random_joke", new=AsyncMock()) as fetch:
             await send_joke(
                 object(),
                 SimpleNamespace(bot_chat_id=None),
@@ -117,31 +118,33 @@ class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
                 Llm(),
                 SimpleNamespace(joke="prompt", joke_a="prompt a", joke_b="prompt b", joke_system="system"),
             )
+        fetch.assert_not_awaited()
 
-    async def test_scheduled_joke_type_b_uses_b_prompt(self) -> None:
+    async def test_scheduled_joke_fetches_from_sources_without_llm(self) -> None:
         class Bot:
             async def send_message(self, chat_id, text, parse_mode=None):
                 self.sent = (chat_id, text, parse_mode)
 
         class Llm:
             async def generate_with_params(self, prompt, **kwargs):
-                self.prompt = prompt
-                return "generated joke"
+                raise AssertionError("Jokes must not call LLM")
 
         bot = Bot()
         llm = Llm()
         settings = SimpleNamespace(
             bot_chat_id=123,
-            joke_model="model",
-            joke_params=SimpleNamespace(),
+            joke_source_urls=["https://example.test/jokes"],
         )
         prompts = SimpleNamespace(joke_a="prompt a", joke_b="prompt b", joke_system="")
 
-        with patch("bot.scheduler.sync_runtime_config", new=AsyncMock()):
+        with patch("bot.scheduler.sync_runtime_config", new=AsyncMock()), patch(
+            "bot.scheduler.fetch_random_joke",
+            new=AsyncMock(return_value=JokeItem("generated joke", "https://example.test/jokes")),
+        ) as fetch:
             await send_joke(bot, settings, object(), llm, prompts, "b")
 
-        self.assertEqual(llm.prompt, "prompt b")
-        self.assertEqual(bot.sent, (123, "generated joke", "HTML"))
+        fetch.assert_awaited_once_with(["https://example.test/jokes"])
+        self.assertEqual(bot.sent, (123, 'generated joke\n\n<a href="https://example.test/jokes">Источник</a>', "HTML"))
 
     async def test_auto_roast_uses_static_bully_message_without_llm(self) -> None:
         class Bot:

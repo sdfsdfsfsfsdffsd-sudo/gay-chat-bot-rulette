@@ -45,6 +45,7 @@ FIELD_LABELS = {
     "IMAGE_SOURCE_CHANNELS": "Каналы-источники изображений",
     "ALABUGA_CHANNEL_URL": "Канал Алабуга Политех",
     "ALABUGA_JOBS_URL": "Источник вакансий Алабуги",
+    "JOKE_SOURCE_URLS": "Источники анекдотов",
     "LOCAL_IMAGE_DIR": "Каталог локальных изображений",
     "DATABASE_PATH": "Путь к SQLite",
     "TRACKED_WORDS": "Отслеживаемые слова",
@@ -148,6 +149,7 @@ GROUPS: dict[str, tuple[str, list[str]]] = {
         "📡 Источники",
         [
             "IMAGE_SOURCE_CHANNELS",
+            "JOKE_SOURCE_URLS",
             "ALABUGA_CHANNEL_URL",
             "ALABUGA_JOBS_URL",
             "LOCAL_IMAGE_DIR",

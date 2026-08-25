@@ -105,6 +105,7 @@ class ConfigTests(unittest.TestCase):
             "ANSWER_WEB_SEARCH_ENABLED": "false",
             "ALABUGA_ENABLED": "false",
             "SUMMARY_ENABLED": "false",
+            "JOKE_SOURCE_URLS": "https://example.test/a,https://example.test/b",
         }
         with patch.dict(os.environ, {}, clear=True), patch("bot.config.load_dotenv"):
             settings = load_settings(overrides)
@@ -122,6 +123,7 @@ class ConfigTests(unittest.TestCase):
         self.assertFalse(settings.answer_web_search_enabled)
         self.assertFalse(settings.alabuga_enabled)
         self.assertFalse(settings.summary_enabled)
+        self.assertEqual(settings.joke_source_urls, ["https://example.test/a", "https://example.test/b"])
 
     def test_fractional_day_schedule_is_supported(self) -> None:
         overrides = {

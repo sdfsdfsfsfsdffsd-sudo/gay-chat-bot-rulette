@@ -14,6 +14,7 @@ from zoneinfo import ZoneInfo
 from bot.bully import render_bully_message
 from bot.config import Settings
 from bot.horoscope import split_horoscope_by_participant
+from bot.jokes import fetch_random_joke, format_joke_html
 from bot.llm import OpenRouterClient
 from bot.prompt_loader import PromptSet
 from bot.runtime_config import sync_runtime_config
@@ -132,15 +133,11 @@ async def send_joke(
     await sync_runtime_config(settings, prompts, storage)
     if settings.bot_chat_id is None:
         return
-    prompt = prompts.joke_b if joke_type.lower() == "b" else prompts.joke_a
-    text = await llm.generate_with_params(
-        prompt,
-        system_prompt=prompts.joke_system,
-        model=settings.joke_model,
-        params=settings.joke_params,
-        max_tokens=500,
-    )
-    await _send_text(bot, settings.bot_chat_id, normalize_telegram_html(text), parse_mode="HTML")
+    joke = await fetch_random_joke(settings.joke_source_urls)
+    if joke is None:
+        await _send_text(bot, settings.bot_chat_id, "Не смог найти анекдот: источники не ответили или пустые.")
+        return
+    await _send_text(bot, settings.bot_chat_id, format_joke_html(joke), parse_mode="HTML")
 
 
 async def maybe_send_random_image(bot: Bot, settings: Settings) -> None:

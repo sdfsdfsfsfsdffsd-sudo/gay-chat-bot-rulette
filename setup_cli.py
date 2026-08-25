@@ -6,6 +6,7 @@ from pathlib import Path
 
 from bot import prompts as default_prompts
 from bot.env_file import ENV_PATH, read_env
+from bot.jokes import DEFAULT_JOKE_SOURCE_URLS
 
 
 QUESTIONS = [
@@ -36,6 +37,7 @@ QUESTIONS = [
     ("IMAGE_SOURCE_CHANNELS", "Image source public channels or t.me/s URLs, comma-separated", False),
     ("ALABUGA_CHANNEL_URL", "Alabuga Polytech public channel URL", False),
     ("ALABUGA_JOBS_URL", "Alabuga jobs URL/source, optional", False),
+    ("JOKE_SOURCE_URLS", "Joke source URLs, comma-separated", False),
     ("HOROSCOPE_TIME", "Daily horoscope time HH:MM", False),
     ("HOROSCOPE_EVERY_DAYS", "Horoscope every N days; decimals allowed; 0 disables", False),
     ("DAILY_SUMMARY_TIME", "Daily summary time HH:MM", False),
@@ -117,6 +119,7 @@ DEFAULTS = {
     "DATABASE_PATH": "data/bot.sqlite3",
     "LOCAL_IMAGE_DIR": "data/images",
     "ALABUGA_CHANNEL_URL": "https://t.me/s/alabugapolytech",
+    "JOKE_SOURCE_URLS": ",".join(DEFAULT_JOKE_SOURCE_URLS),
     "HOROSCOPE_TIME": "09:30",
     "HOROSCOPE_EVERY_DAYS": "1",
     "DAILY_SUMMARY_TIME": "23:30",
@@ -234,6 +237,7 @@ def write_env(values: dict[str, str]) -> None:
         "IMAGE_SOURCE_CHANNELS",
         "ALABUGA_CHANNEL_URL",
         "ALABUGA_JOBS_URL",
+        "JOKE_SOURCE_URLS",
         "HOROSCOPE_TIME",
         "HOROSCOPE_EVERY_DAYS",
         "DAILY_SUMMARY_TIME",

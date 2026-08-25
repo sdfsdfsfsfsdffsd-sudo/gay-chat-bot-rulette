@@ -60,7 +60,8 @@ ALABUGA_ENABLED=true
 
 Per-feature model ids are shown in `/admin` and can be changed without restart.
 Empty `HOROSCOPE_MODEL` means the bot uses `SUMMARY_MODEL`.
-Empty `JOKE_MODEL` falls back to the uncensored default model.
+`JOKE_MODEL` is kept for backward-compatible settings, but joke sending now
+uses parsed website sources instead of the LLM.
 
 ## Schedule And Context
 
@@ -82,6 +83,14 @@ CONSPIRACY_TIME=20:00
 CONSPIRACY_EVERY_DAYS=3
 ALABUGA_EVERY_HOURS=4
 ```
+
+Jokes are fetched from configured websites:
+
+```env
+JOKE_SOURCE_URLS=https://www.motustrans.ru/forum/forum12/topic3/messages/,https://anekdotovstreet.com/transport/dalnoboyschiki/,https://taha163.ru/?page_id=135
+```
+
+If one site is down, the bot tries the next configured source.
 
 Context windows are independent from posting frequency:
 
@@ -117,9 +126,8 @@ JOKE_B_PROMPT_PATH=prompts/joke_b.txt
 
 The Telegram admin panel can also write direct prompt overrides into the bot database.
 Prompt priority is: admin prompt override, then prompt file path from effective settings, then built-in default.
-Jokes have two independent main prompt overrides: `JOKE_A_PROMPT_TEXT` and
-`JOKE_B_PROMPT_TEXT`. The older `JOKE_PROMPT_TEXT` is still accepted as a
-fallback for type A.
+Joke prompt settings are legacy-compatible; `/joke_now` and scheduled Joke A/B
+now fetch random jokes from `JOKE_SOURCE_URLS` instead of generating them.
 
 System prompts are configured independently per service in `/admin`:
 `ANSWER_SYSTEM_PROMPT_TEXT`, `SUMMARY_SYSTEM_PROMPT_TEXT`,
@@ -242,7 +250,7 @@ For administrators:
 - `/bind_chat` - saves the current chat id to SQLite and applies it at runtime.
 - `/summary_now` - generates a summary immediately.
 - `/horoscope_now` - generates a horoscope immediately.
-- `/joke_now`, `/joke_now a`, `/joke_now b` - generates a joke immediately.
+- `/joke_now` - fetches a random joke from configured websites immediately.
 - `/conspiracy_now` - generates a conspiracy post immediately.
 - `/bully_text` - shows or changes the static bully text.
 - `/bully_target` - shows or changes the default bully target.

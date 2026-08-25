@@ -29,6 +29,7 @@ from bot.bully import render_bully_message
 from bot.config import BOOLEAN_SETTING_KEYS, Settings, validate_setting_override
 from bot.commands import can_use_command, commands_text
 from bot.horoscope import split_horoscope_by_participant
+from bot.jokes import fetch_random_joke, format_joke_html
 from bot.llm import OpenRouterClient
 from bot.prompt_loader import PromptSet
 from bot.runtime_config import sync_runtime_config
@@ -393,20 +394,14 @@ def build_router(
         if not is_admin(message):
             return
         await sync_runtime_config(settings, prompts, storage)
-        requested_type = command_argument(message.text).lower()
-        joke_type = requested_type if requested_type in {"a", "b"} else random.choice(("a", "b"))
-        joke_prompt = prompts.joke_b if joke_type == "b" else prompts.joke_a
-        text = await llm.generate_with_params(
-            joke_prompt,
-            system_prompt=prompts.joke_system,
-            model=settings.joke_model,
-            params=settings.joke_params,
-            max_tokens=500,
-        )
+        joke = await fetch_random_joke(settings.joke_source_urls)
+        if joke is None:
+            await message.answer("Не смог найти анекдот: источники не ответили или пустые.")
+            return
         try:
-            await message.answer(normalize_telegram_html(text)[:4000], parse_mode="HTML")
+            await message.answer(format_joke_html(joke)[:4000], parse_mode="HTML", disable_web_page_preview=True)
         except Exception:
-            await message.answer(text[:4000])
+            await message.answer(joke.text[:4000])
 
     @router.message(Command("conspiracy_now"))
     async def conspiracy_now(message: Message) -> None:

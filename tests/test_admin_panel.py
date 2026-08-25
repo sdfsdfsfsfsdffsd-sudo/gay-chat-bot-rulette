@@ -32,6 +32,7 @@ class AdminPanelTests(unittest.TestCase):
         self.assertIn("ANSWER_WEB_SEARCH_ENABLED", FIELDS)
         self.assertIn("ALABUGA_ENABLED", FIELDS)
         self.assertIn("SUMMARY_ENABLED", FIELDS)
+        self.assertIn("JOKE_SOURCE_URLS", FIELDS)
         self.assertNotIn("ROAST_CONTEXT_DAYS", FIELDS)
         self.assertIn("prompt_texts", GROUPS)
         self.assertIn("automations", GROUPS)
@@ -41,6 +42,7 @@ class AdminPanelTests(unittest.TestCase):
         self.assertIn("BULLY_TARGET_USERNAME", GROUPS["main"][1])
         self.assertIn("ANSWER_WEB_SEARCH_ENABLED", GROUPS["answer"][1])
         self.assertIn("ALABUGA_ENABLED", GROUPS["automations"][1])
+        self.assertIn("JOKE_SOURCE_URLS", GROUPS["sources"][1])
 
     def test_boolean_fields_have_toggle_button(self) -> None:
         keyboard = admin_field_keyboard("ALABUGA_ENABLED")
