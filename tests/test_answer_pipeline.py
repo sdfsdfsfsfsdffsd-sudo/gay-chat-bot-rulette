@@ -61,10 +61,12 @@ class AnswerPipelineTests(unittest.TestCase):
         self.assertEqual(build_answer_prompt("How are you?"), "How are you?")
 
     def test_explicit_chat_context_is_labeled(self) -> None:
-        self.assertEqual(
-            build_answer_prompt("What did we discuss?", "Max: deployment"),
-            "Контекст чата:\nMax: deployment\n\nВопрос:\nWhat did we discuss?",
-        )
+        prompt = build_answer_prompt("What did we discuss?", "Max: deployment")
+
+        self.assertIn("только как справочный контекст", prompt)
+        self.assertIn("Не отвечай на них по отдельности", prompt)
+        self.assertIn("Контекст чата:\nMax: deployment", prompt)
+        self.assertIn("Вопрос пользователя:\nWhat did we discuss?", prompt)
 
     def test_command_argument(self) -> None:
         self.assertEqual(command_argument("/bully @max"), "@max")
@@ -124,7 +126,7 @@ class AnswerPipelineTests(unittest.TestCase):
 
         self.assertIn("одним коротким предложением", text)
         self.assertIn("Контекст чата:\nMax: Уже готово\nБот: Проверь результат", text)
-        self.assertIn("Вопрос:\nНу и?", text)
+        self.assertIn("Вопрос пользователя:\nНу и?", text)
         self.assertIn("Ну и?", text)
 
 

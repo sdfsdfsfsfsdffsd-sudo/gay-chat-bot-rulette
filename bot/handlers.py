@@ -80,7 +80,13 @@ def clean_question_text(text: str, bot_username: str | None) -> str:
 
 def build_answer_prompt(question: str, context: str | None = None) -> str:
     if context:
-        return f"Контекст чата:\n{context}\n\nВопрос:\n{question}"
+        return (
+            "Предыдущие сообщения приведены только как справочный контекст. "
+            "Не отвечай на них по отдельности и не продолжай эту переписку. "
+            "Ответь только на вопрос после блока контекста.\n\n"
+            f"Контекст чата:\n{context}\n\n"
+            f"Вопрос пользователя:\n{question}"
+        )
     return question
 
 
