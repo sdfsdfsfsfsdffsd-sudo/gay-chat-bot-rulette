@@ -59,6 +59,30 @@ class StorageTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(messages, ["max: target message"])
 
+    async def test_messages_before_excludes_current_question_and_keeps_order(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = Storage(Path(temp_dir) / "bot.sqlite3")
+            await storage.init()
+            for index in range(1, 7):
+                current_id = await storage.save_message(
+                    chat_id=1,
+                    user_id=index,
+                    username=f"user{index}",
+                    full_name=None,
+                    text=f"message {index}",
+                    created_at=datetime.now(),
+                )
+
+            messages = await storage.messages_before(1, current_id, limit=5)
+
+        self.assertEqual(messages, [
+            "user1: message 1",
+            "user2: message 2",
+            "user3: message 3",
+            "user4: message 4",
+            "user5: message 5",
+        ])
+
     async def test_prompt_overrides_can_be_set_and_cleared(self) -> None:
         with tempfile.TemporaryDirectory() as temp_dir:
             storage = Storage(Path(temp_dir) / "bot.sqlite3")

@@ -120,9 +120,11 @@ class AnswerPipelineTests(unittest.TestCase):
         self.assertIn("automations: summary=True | horoscope=False", text)
 
     def test_short_reply_prompt_is_short_answer_instruction(self) -> None:
-        text = build_short_reply_answer_prompt("Ну и?")
+        text = build_short_reply_answer_prompt("Ну и?", "Max: Уже готово\nБот: Проверь результат")
 
         self.assertIn("одним коротким предложением", text)
+        self.assertIn("Контекст чата:\nMax: Уже готово\nБот: Проверь результат", text)
+        self.assertIn("Вопрос:\nНу и?", text)
         self.assertIn("Ну и?", text)
 
 

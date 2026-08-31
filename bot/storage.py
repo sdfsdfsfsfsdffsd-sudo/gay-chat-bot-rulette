@@ -72,9 +72,9 @@ class Storage:
         full_name: str | None,
         text: str,
         created_at: datetime,
-    ) -> None:
+    ) -> int:
         async with aiosqlite.connect(self.path) as db:
-            await db.execute(
+            cursor = await db.execute(
                 """
                 INSERT INTO messages(chat_id, user_id, username, full_name, text, created_at)
                 VALUES (?, ?, ?, ?, ?, ?)
@@ -82,6 +82,24 @@ class Storage:
                 (chat_id, user_id, username, full_name, text, created_at.isoformat()),
             )
             await db.commit()
+            return int(cursor.lastrowid)
+
+    async def messages_before(self, chat_id: int, before_id: int, *, limit: int = 5) -> list[str]:
+        if limit <= 0:
+            return []
+        async with aiosqlite.connect(self.path) as db:
+            cursor = await db.execute(
+                """
+                SELECT COALESCE(username, full_name, 'user'), text
+                FROM messages
+                WHERE chat_id = ? AND id < ?
+                ORDER BY id DESC
+                LIMIT ?
+                """,
+                (chat_id, before_id, limit),
+            )
+            rows = await cursor.fetchall()
+        return [f"{name}: {text}" for name, text in reversed(rows)]
 
     async def recent_messages(self, chat_id: int, *, hours: int = 24, limit: int = 500) -> list[str]:
         since = (datetime.now() - timedelta(hours=hours)).isoformat()

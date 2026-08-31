@@ -84,12 +84,12 @@ def build_answer_prompt(question: str, context: str | None = None) -> str:
     return question
 
 
-def build_short_reply_answer_prompt(question: str) -> str:
-    return (
+def build_short_reply_answer_prompt(question: str, context: str | None = None) -> str:
+    instruction = (
         "Ответь одним коротким предложением: дерзко, жестко и по делу. "
-        "Без рассуждений, без списков, без ролей.\n\n"
-        f"{question}"
+        "Без рассуждений, без списков, без ролей."
     )
+    return f"{instruction}\n\n{build_answer_prompt(question, context)}"
 
 
 def command_argument(text: str | None) -> str:
@@ -613,7 +613,7 @@ def build_router(
         if not message.text:
             return
         user = message.from_user
-        await storage.save_message(
+        stored_message_id = await storage.save_message(
             chat_id=message.chat.id,
             user_id=user.id if user else None,
             username=user.username if user else None,
@@ -636,7 +636,15 @@ def build_router(
         async with lock:
             processing_message = await message.reply("Ищу ответ на вопрос...")
             try:
-                text = await generate_answer(message, me.username, settings, storage, llm, short_reply=replied_to_bot)
+                text = await generate_answer(
+                    message,
+                    me.username,
+                    settings,
+                    storage,
+                    llm,
+                    short_reply=replied_to_bot,
+                    stored_message_id=stored_message_id,
+                )
                 try:
                     await message.reply(normalize_telegram_html(text)[:4000], parse_mode="HTML")
                 except Exception:
@@ -659,11 +667,22 @@ def build_router(
         llm: OpenRouterClient,
         *,
         short_reply: bool = False,
+        stored_message_id: int | None = None,
     ) -> str:
         await sync_runtime_config(settings, prompts, storage)
         question = clean_question_text(message.text or "", bot_username)
         if short_reply:
-            prompt = build_short_reply_answer_prompt(question)
+            replied_text = (message.reply_to_message.text or message.reply_to_message.caption or "").strip() if message.reply_to_message else ""
+            history_limit = 4 if replied_text else 5
+            history = (
+                await storage.messages_before(message.chat.id, stored_message_id, limit=history_limit)
+                if stored_message_id is not None
+                else []
+            )
+            if replied_text:
+                history.append(f"Бот: {replied_text}")
+            context = "\n".join(history)
+            prompt = build_short_reply_answer_prompt(question, context or None)
             max_tokens = 120
             web_search = False
         elif wants_chat_context(message.text):
