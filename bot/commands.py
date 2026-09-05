@@ -34,6 +34,7 @@ COMMANDS = (
     CommandDefinition("horoscope_now", "Сделать гороскоп сейчас"),
     CommandDefinition("joke_now", "Анекдот сейчас: a, b или random"),
     CommandDefinition("conspiracy_now", "Создать теорию заговора сейчас"),
+    CommandDefinition("alabuga_circle", "Отправить тестовый кружок Алабуги"),
     CommandDefinition("bully_text", "Показать или изменить bully-текст"),
     CommandDefinition("bully_target", "Показать или изменить bully-цель"),
 )

@@ -53,6 +53,18 @@ class TelegramSourceTests(unittest.TestCase):
         self.assertEqual(items[0].text, "")
         self.assertEqual(items[0].media[0].kind, "video")
 
+    def test_feed_parser_recognizes_round_video(self) -> None:
+        content = """
+        <div class="tgme_widget_message roundvideo_media" data-post="alabugapolytech/3506">
+          <video class="tgme_widget_message_roundvideo js-message_roundvideo"
+                 src="https://cdn.example/round.mp4"></video>
+        </div>
+        """
+
+        items = parse_telegram_feed_html(content, "https://t.me/s/alabugapolytech")
+
+        self.assertEqual(items[0].media[0].kind, "video_note")
+
 
 if __name__ == "__main__":
     unittest.main()

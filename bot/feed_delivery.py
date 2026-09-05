@@ -75,6 +75,22 @@ async def _send_media_copy(bot: Bot, chat_id: int, item: FeedItem) -> bool:
     text = feed_text(item)
     caption = text if len(text) <= 1024 else None
     media = item_media[:10]
+    if len(media) == 1 and media[0].kind == "video_note":
+        try:
+            in_memory_file = (await _download_media_assets(media))[0]
+            await bot.send_video_note(chat_id, in_memory_file)
+            if text:
+                await bot.send_message(chat_id, text[:4000])
+            return True
+        except Exception as error:
+            logger.warning(
+                "Could not send parsed Telegram video note for %s: %s: %s",
+                item.url,
+                type(error).__name__,
+                error,
+            )
+            return False
+
     try:
         await _send_media_payload(bot, chat_id, media, [asset.url for asset in media], caption)
     except Exception as url_error:

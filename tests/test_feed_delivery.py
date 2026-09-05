@@ -30,6 +30,11 @@ class FakeBot:
         if self.media_fails or (self.url_media_fails and isinstance(video, str)):
             raise RuntimeError("URL unavailable")
 
+    async def send_video_note(self, chat_id, video_note, **kwargs):
+        self.calls.append(("video_note", chat_id, video_note, kwargs))
+        if self.media_fails:
+            raise RuntimeError("video note unavailable")
+
     async def send_media_group(self, chat_id, media):
         self.calls.append(("album", chat_id, media))
         if self.media_fails:
@@ -114,6 +119,27 @@ class FeedDeliveryTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result, "media")
         self.assertIs(bot.calls[-1][2], buffered)
+
+    async def test_round_video_is_uploaded_from_memory_as_video_note(self) -> None:
+        bot = FakeBot()
+        item = FeedItem(
+            key="round",
+            text="",
+            url="https://t.me/channel/5",
+            media=(FeedMedia("video_note", "https://cdn.example/round.mp4"),),
+        )
+        buffered = BufferedInputFile(b"round video bytes", "round.mp4")
+
+        with patch(
+            "bot.feed_delivery._download_media_assets",
+            new=AsyncMock(return_value=[buffered]),
+        ):
+            result = await forward_or_copy_feed_item(bot, -1001, item)
+
+        self.assertEqual(result, "media")
+        self.assertEqual(bot.calls[0][0], "video_note")
+        self.assertIs(bot.calls[0][2], buffered)
+        self.assertEqual(bot.calls[1], ("text", -1001, "https://t.me/channel/5"))
 
 
 if __name__ == "__main__":

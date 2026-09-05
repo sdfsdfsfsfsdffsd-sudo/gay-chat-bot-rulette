@@ -61,7 +61,9 @@ def parse_telegram_feed_html(content: str, source_url: str, *, limit: int = 8) -
         for video in message.select("video[src]"):
             media_url = unescape(video.get("src", ""))
             if media_url and media_url not in seen_urls:
-                media.append(FeedMedia("video", media_url))
+                classes = set(video.get("class", ()))
+                kind = "video_note" if "tgme_widget_message_roundvideo" in classes else "video"
+                media.append(FeedMedia(kind, media_url))
                 seen_urls.add(media_url)
 
         if text or media:

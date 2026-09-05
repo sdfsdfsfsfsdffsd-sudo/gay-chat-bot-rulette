@@ -38,7 +38,7 @@ from bot.jokes import fetch_random_joke, format_joke_html
 from bot.llm import OpenRouterClient
 from bot.prompt_loader import PromptSet
 from bot.runtime_config import sync_runtime_config
-from bot.sources import fetch_random_telegram_item
+from bot.sources import fetch_random_telegram_item, fetch_telegram_feed
 from bot.storage import Storage
 from bot.telegram_format import normalize_telegram_html
 from bot.word_stats import build_daily_word_stats
@@ -595,6 +595,17 @@ def build_router(
             await message.answer("Не смог найти посты в канале Алабуга Политех.")
             return
         await forward_or_copy_feed_item(bot, message.chat.id, item)
+
+    @router.message(Command("alabuga_circle"))
+    async def alabuga_circle(message: Message, bot: Bot) -> None:
+        if not can_run(message, "alabuga_circle"):
+            return
+        items = await fetch_telegram_feed(settings.alabuga_channel_url, limit=30)
+        circles = [item for item in items if any(media.kind == "video_note" for media in item.media)]
+        if not circles:
+            await message.answer("Среди последних постов канала кружки не найдены.")
+            return
+        await forward_or_copy_feed_item(bot, message.chat.id, random.choice(circles))
 
 
     @router.message()

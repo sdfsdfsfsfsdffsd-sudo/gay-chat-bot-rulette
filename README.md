@@ -234,6 +234,7 @@ For administrators:
 - `/horoscope_now` - generates a horoscope immediately.
 - `/joke_now` - fetches a random joke from configured websites immediately.
 - `/conspiracy_now` - generates a conspiracy post immediately.
+- `/alabuga_circle` - finds and sends a recent Alabuga video note for testing.
 - `/bully_text` - shows or changes the static bully text.
 - `/bully_target` - shows or changes the default bully target.
 
@@ -249,9 +250,11 @@ If the bot cannot access the source post, Telegram returns an error such as
 public Telegram page and sends their temporary CDN URLs through Bot API. If
 Telegram cannot fetch a URL itself, the bot downloads it into bounded RAM and
 immediately uploads it without creating local or persistent files. Albums are
-sent with up to ten media items. If media delivery still fails, the bot sends
-the parsed text and direct post link. There is no user-account or Telethon
-fallback.
+sent with up to ten media items. Telegram round videos are detected separately,
+uploaded from RAM with `sendVideoNote`, and followed by the post text/link
+because video notes do not support captions. If media delivery still fails, the
+bot sends the parsed text and direct post link. There is no user-account or
+Telethon fallback.
 - `/word_stats_now` - prints daily tracked-word stats immediately.
 
 ## Safety Boundaries
