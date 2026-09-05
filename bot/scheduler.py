@@ -19,7 +19,7 @@ from bot.llm import OpenRouterClient
 from bot.prompt_loader import PromptSet
 from bot.runtime_config import sync_runtime_config
 from bot.sources import (
-    fetch_latest_unsent_telegram_item,
+    fetch_random_unsent_telegram_item,
 )
 from bot.storage import Storage
 from bot.telegram_format import normalize_telegram_html
@@ -179,7 +179,12 @@ async def send_conspiracy(bot: Bot, settings: Settings, storage: Storage, llm: O
 async def send_alabuga_news(bot: Bot, settings: Settings, storage: Storage) -> None:
     if settings.bot_chat_id is None:
         return
-    item = await fetch_latest_unsent_telegram_item(settings.alabuga_channel_url, storage.was_sent)
+    item = await fetch_random_unsent_telegram_item(
+        settings.alabuga_channel_url,
+        storage.was_sent,
+        limit=30,
+        video_note_weight=1.1,
+    )
     if not item:
         return
     await _forward_or_send_feed_item(bot, settings, settings.bot_chat_id, item)

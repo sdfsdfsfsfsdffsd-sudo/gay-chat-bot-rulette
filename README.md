@@ -250,10 +250,12 @@ If the bot cannot access the source post, Telegram returns an error such as
 public Telegram page and sends their temporary CDN URLs through Bot API. If
 Telegram cannot fetch a URL itself, the bot downloads it into bounded RAM and
 immediately uploads it without creating local or persistent files. Albums are
-sent with up to ten media items. Telegram round videos are detected separately,
-uploaded from RAM with `sendVideoNote`, and followed by the post text/link
-because video notes do not support captions. If media delivery still fails, the
-bot sends the parsed text and direct post link. There is no user-account or
+sent with up to ten media items. Supported Telegram HTML formatting is retained
+in copied captions and text, while automatic link previews are disabled to avoid
+duplicate thumbnails. Telegram round videos are detected separately and uploaded
+from RAM with `sendVideoNote`; media-only round-video posts produce exactly one
+message. Scheduled Alabuga delivery chooses among unsent posts and gives round
+videos a 10 percent higher selection weight. There is no user-account or
 Telethon fallback.
 - `/word_stats_now` - prints daily tracked-word stats immediately.
 

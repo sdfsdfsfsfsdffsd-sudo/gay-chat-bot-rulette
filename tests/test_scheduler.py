@@ -10,7 +10,14 @@ from apscheduler.triggers.cron import CronTrigger
 from apscheduler.triggers.interval import IntervalTrigger
 
 from bot.jokes import JokeItem
-from bot.scheduler import _forward_or_send_feed_item, configure_scheduler, maybe_send_bully, periodic_day_trigger, send_joke
+from bot.scheduler import (
+    _forward_or_send_feed_item,
+    configure_scheduler,
+    maybe_send_bully,
+    periodic_day_trigger,
+    send_alabuga_news,
+    send_joke,
+)
 
 
 class RecordingScheduler:
@@ -212,8 +219,8 @@ class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
             async def forward_message(self, *args, **kwargs):
                 raise RuntimeError("bot api cannot access source")
 
-            async def send_message(self, chat_id, text, parse_mode=None):
-                self.sent = (chat_id, text, parse_mode)
+            async def send_message(self, chat_id, text, parse_mode=None, **kwargs):
+                self.sent = (chat_id, text, parse_mode, kwargs)
 
         bot = Bot()
         item = SimpleNamespace(
@@ -225,7 +232,28 @@ class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
 
         await _forward_or_send_feed_item(bot, SimpleNamespace(), -1001, item)
 
-        self.assertEqual(bot.sent, (-1001, "post\n\nhttps://t.me/alabugapolytech/123", None))
+        self.assertEqual(bot.sent[0:3], (-1001, "post", "HTML"))
+        self.assertTrue(bot.sent[3]["link_preview_options"].is_disabled)
+
+    async def test_scheduled_alabuga_uses_weighted_random_unsent_selection(self) -> None:
+        item = SimpleNamespace(key="tg:channel/7")
+        storage = SimpleNamespace(was_sent=AsyncMock(), mark_sent=AsyncMock())
+        settings = SimpleNamespace(bot_chat_id=-1001, alabuga_channel_url="https://t.me/s/channel")
+
+        with patch(
+            "bot.scheduler.fetch_random_unsent_telegram_item",
+            new=AsyncMock(return_value=item),
+        ) as fetch, patch("bot.scheduler._forward_or_send_feed_item", new=AsyncMock()) as deliver:
+            await send_alabuga_news(object(), settings, storage)
+
+        fetch.assert_awaited_once_with(
+            settings.alabuga_channel_url,
+            storage.was_sent,
+            limit=30,
+            video_note_weight=1.1,
+        )
+        deliver.assert_awaited_once()
+        storage.mark_sent.assert_awaited_once_with(item.key)
 
 
 if __name__ == "__main__":

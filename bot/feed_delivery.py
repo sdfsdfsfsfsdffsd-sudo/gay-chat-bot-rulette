@@ -1,12 +1,13 @@
 from __future__ import annotations
 
 import logging
+from html import escape
 from pathlib import PurePosixPath
 from urllib.parse import urlparse
 
 import httpx
 from aiogram import Bot
-from aiogram.types import BufferedInputFile, InputMediaPhoto, InputMediaVideo
+from aiogram.types import BufferedInputFile, InputMediaPhoto, InputMediaVideo, LinkPreviewOptions
 
 from bot.sources import FeedItem
 
@@ -17,8 +18,24 @@ MAX_TOTAL_MEDIA_BYTES = 80 * 1024 * 1024
 
 
 def feed_text(item: FeedItem) -> str:
-    parts = [part for part in (item.text.strip(), item.url.strip()) if part]
-    return "\n\n".join(parts)
+    return item.text.strip()
+
+
+def feed_html(item: FeedItem) -> str:
+    return (getattr(item, "html_text", "") or escape(item.text.strip())).strip()
+
+
+async def _send_feed_text(bot: Bot, chat_id: int, item: FeedItem) -> None:
+    plain_text = feed_text(item)
+    if not plain_text:
+        return
+    value = feed_html(item) if len(plain_text) <= 4000 else escape(plain_text[:4000])
+    await bot.send_message(
+        chat_id,
+        value,
+        parse_mode="HTML",
+        link_preview_options=LinkPreviewOptions(is_disabled=True),
+    )
 
 
 def _media_filename(url: str, kind: str, index: int) -> str:
@@ -55,14 +72,14 @@ async def _send_media_payload(bot: Bot, chat_id: int, media, payloads, caption: 
     if len(media) == 1:
         asset = media[0]
         if asset.kind == "video":
-            await bot.send_video(chat_id, payloads[0], caption=caption, supports_streaming=True)
+            await bot.send_video(chat_id, payloads[0], caption=caption, parse_mode="HTML", supports_streaming=True)
         else:
-            await bot.send_photo(chat_id, payloads[0], caption=caption)
+            await bot.send_photo(chat_id, payloads[0], caption=caption, parse_mode="HTML")
         return
 
     album = []
     for index, (asset, payload) in enumerate(zip(media, payloads)):
-        kwargs = {"media": payload, "caption": caption if index == 0 else None}
+        kwargs = {"media": payload, "caption": caption if index == 0 else None, "parse_mode": "HTML"}
         album.append(InputMediaVideo(**kwargs) if asset.kind == "video" else InputMediaPhoto(**kwargs))
     await bot.send_media_group(chat_id, album)
 
@@ -73,14 +90,14 @@ async def _send_media_copy(bot: Bot, chat_id: int, item: FeedItem) -> bool:
         return False
 
     text = feed_text(item)
-    caption = text if len(text) <= 1024 else None
+    caption = feed_html(item) if text and len(text) <= 1024 else None
     media = item_media[:10]
     if len(media) == 1 and media[0].kind == "video_note":
         try:
             in_memory_file = (await _download_media_assets(media))[0]
             await bot.send_video_note(chat_id, in_memory_file)
             if text:
-                await bot.send_message(chat_id, text[:4000])
+                await _send_feed_text(bot, chat_id, item)
             return True
         except Exception as error:
             logger.warning(
@@ -109,7 +126,7 @@ async def _send_media_copy(bot: Bot, chat_id: int, item: FeedItem) -> bool:
 
     try:
         if caption is None and text:
-            await bot.send_message(chat_id, text[:4000])
+            await _send_feed_text(bot, chat_id, item)
         return True
     except Exception as error:
         logger.warning(
@@ -135,5 +152,13 @@ async def forward_or_copy_feed_item(bot: Bot, chat_id: int, item: FeedItem) -> s
             )
     if await _send_media_copy(bot, chat_id, item):
         return "media"
-    await bot.send_message(chat_id, feed_text(item)[:4000])
+    if feed_text(item):
+        await _send_feed_text(bot, chat_id, item)
+    else:
+        await bot.send_message(
+            chat_id,
+            escape(item.url),
+            parse_mode="HTML",
+            link_preview_options=LinkPreviewOptions(is_disabled=True),
+        )
     return "text"

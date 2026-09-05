@@ -40,8 +40,8 @@ class FakeBot:
         if self.media_fails:
             raise RuntimeError("URL unavailable")
 
-    async def send_message(self, chat_id, text):
-        self.calls.append(("text", chat_id, text))
+    async def send_message(self, chat_id, text, **kwargs):
+        self.calls.append(("text", chat_id, text, kwargs))
 
 
 class FeedDeliveryTests(unittest.IsolatedAsyncioTestCase):
@@ -60,7 +60,8 @@ class FeedDeliveryTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(result, "media")
         self.assertEqual(bot.calls[1][0:3], ("photo", -1001, "https://cdn.example/photo.jpg"))
-        self.assertEqual(bot.calls[1][3]["caption"], "Caption\n\nhttps://t.me/channel/1")
+        self.assertEqual(bot.calls[1][3]["caption"], "Caption")
+        self.assertEqual(bot.calls[1][3]["parse_mode"], "HTML")
 
     async def test_album_uses_remote_urls_and_caption_on_first_item(self) -> None:
         bot = FakeBot()
@@ -79,7 +80,8 @@ class FeedDeliveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, "media")
         album = bot.calls[0][2]
         self.assertEqual(album[0].media, "https://cdn.example/one.jpg")
-        self.assertEqual(album[0].caption, "Album\n\nhttps://t.me/channel/2")
+        self.assertEqual(album[0].caption, "Album")
+        self.assertEqual(album[0].parse_mode, "HTML")
         self.assertEqual(album[1].media, "https://cdn.example/two.mp4")
         self.assertIsNone(album[1].caption)
 
@@ -99,7 +101,8 @@ class FeedDeliveryTests(unittest.IsolatedAsyncioTestCase):
             result = await forward_or_copy_feed_item(bot, -1001, item)
 
         self.assertEqual(result, "text")
-        self.assertEqual(bot.calls[-1], ("text", -1001, "Text\n\nhttps://t.me/channel/3"))
+        self.assertEqual(bot.calls[-1][0:3], ("text", -1001, "Text"))
+        self.assertTrue(bot.calls[-1][3]["link_preview_options"].is_disabled)
 
     async def test_failed_remote_url_retries_with_in_memory_upload(self) -> None:
         bot = FakeBot(url_media_fails=True)
@@ -139,7 +142,22 @@ class FeedDeliveryTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(result, "media")
         self.assertEqual(bot.calls[0][0], "video_note")
         self.assertIs(bot.calls[0][2], buffered)
-        self.assertEqual(bot.calls[1], ("text", -1001, "https://t.me/channel/5"))
+        self.assertEqual(len(bot.calls), 1)
+
+    async def test_original_html_is_used_for_media_caption(self) -> None:
+        bot = FakeBot()
+        item = FeedItem(
+            key="formatted",
+            text="Title\nDetails",
+            html_text="<b>Title</b>\n<i>Details</i>",
+            url="https://t.me/channel/6",
+            media=(FeedMedia("photo", "https://cdn.example/photo.jpg"),),
+        )
+
+        result = await forward_or_copy_feed_item(bot, -1001, item)
+
+        self.assertEqual(result, "media")
+        self.assertEqual(bot.calls[0][3]["caption"], "<b>Title</b>\n<i>Details</i>")
 
 
 if __name__ == "__main__":
