@@ -12,6 +12,7 @@ from zoneinfo import ZoneInfo
 
 from bot.bully import render_bully_message
 from bot.config import Settings
+from bot.feed_delivery import forward_or_copy_feed_item
 from bot.horoscope import split_horoscope_by_participant
 from bot.jokes import fetch_random_joke, format_joke_html
 from bot.llm import OpenRouterClient
@@ -78,13 +79,7 @@ async def _send_text(bot: Bot, chat_id: int | None, text: str, *, parse_mode: st
 async def _forward_or_send_feed_item(bot: Bot, settings: Settings, chat_id: int | None, item) -> None:
     if chat_id is None:
         return
-    if item.channel_username and item.message_id:
-        try:
-            await bot.forward_message(chat_id, f"@{item.channel_username}", item.message_id)
-            return
-        except Exception as error:
-            logger.warning("Could not forward Telegram post %s/%s: %s", item.channel_username, item.message_id, error)
-    await _send_text(bot, chat_id, f"Alabuga Polytech:\n\n{item.text}\n\n{item.url}")
+    await forward_or_copy_feed_item(bot, chat_id, item)
 
 
 def _participants_block(participants: list[str]) -> str:

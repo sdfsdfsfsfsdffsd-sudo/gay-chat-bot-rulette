@@ -245,8 +245,13 @@ caption, and source attribution; media cannot be added to or changed inside an
 already forwarded message.
 
 If the bot cannot access the source post, Telegram returns an error such as
-`message to forward not found`. The bot then sends the parsed text and source
-link as a new message. There is no user-account or Telethon fallback.
+`message to forward not found`. The bot then parses photos and videos from the
+public Telegram page and sends their temporary CDN URLs through Bot API. If
+Telegram cannot fetch a URL itself, the bot downloads it into bounded RAM and
+immediately uploads it without creating local or persistent files. Albums are
+sent with up to ten media items. If media delivery still fails, the bot sends
+the parsed text and direct post link. There is no user-account or Telethon
+fallback.
 - `/word_stats_now` - prints daily tracked-word stats immediately.
 
 ## Safety Boundaries

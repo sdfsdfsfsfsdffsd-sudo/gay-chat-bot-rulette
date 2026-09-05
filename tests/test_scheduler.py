@@ -225,7 +225,7 @@ class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
 
         await _forward_or_send_feed_item(bot, SimpleNamespace(), -1001, item)
 
-        self.assertEqual(bot.sent, (-1001, "Alabuga Polytech:\n\npost\n\nhttps://t.me/alabugapolytech/123", None))
+        self.assertEqual(bot.sent, (-1001, "post\n\nhttps://t.me/alabugapolytech/123", None))
 
 
 if __name__ == "__main__":

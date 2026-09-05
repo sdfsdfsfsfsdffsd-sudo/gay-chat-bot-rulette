@@ -32,6 +32,7 @@ from bot.answer_pipeline import AnswerExtractionError, generate_clean_answer
 from bot.bully import render_bully_message
 from bot.config import BOOLEAN_SETTING_KEYS, Settings, validate_setting_override
 from bot.commands import can_use_command, commands_text
+from bot.feed_delivery import forward_or_copy_feed_item
 from bot.horoscope import split_horoscope_by_participant
 from bot.jokes import fetch_random_joke, format_joke_html
 from bot.llm import OpenRouterClient
@@ -233,8 +234,9 @@ def build_router(
             "<b>Telegram-пересылка</b>\n\n"
             "Режим: <code>только Bot API</code>\n"
             "Настоящий forward сохраняет исходное медиа и подпись автоматически. "
-            "Если исходный пост недоступен боту, отправляется текст и ссылка; "
-            "добавить медиа внутрь уже пересланного сообщения нельзя.",
+            "Если исходный пост недоступен боту, фото, видео и альбомы копируются "
+            "с публичной страницы без сохранения на диск. Если медиа недоступно, "
+            "отправляются текст и ссылка.",
             parse_mode="HTML",
         )
 
@@ -592,13 +594,7 @@ def build_router(
         if not item:
             await message.answer("Не смог найти посты в канале Алабуга Политех.")
             return
-        if item.channel_username and item.message_id:
-            try:
-                await bot.forward_message(message.chat.id, f"@{item.channel_username}", item.message_id)
-                return
-            except Exception as error:
-                logger.warning("Could not forward Telegram post %s/%s: %s", item.channel_username, item.message_id, error)
-        await message.answer(f"Alabuga Polytech:\n\n{item.text[:3400]}\n\n{item.url}")
+        await forward_or_copy_feed_item(bot, message.chat.id, item)
 
 
     @router.message()
