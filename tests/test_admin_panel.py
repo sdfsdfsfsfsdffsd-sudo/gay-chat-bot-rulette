@@ -161,14 +161,10 @@ class AdminPanelTests(unittest.TestCase):
         text = admin_group_text("integrations", settings_stub(
             telegram_bot_token="secret-token",
             openrouter_api_key="secret-key",
-            telegram_user_api_id=24981156,
-            telegram_user_api_hash="secret-hash",
-            telegram_user_session="secret-session",
         ))
 
         self.assertIn("Telegram-бот: <b>✅ подключён</b>", text)
-        self.assertIn("Telegram-пересылка: <b>✅ подключена</b>", text)
-        self.assertIn("API ID: <code>24981156</code>", text)
+        self.assertIn("Telegram-пересылка: <b>Bot API</b>", text)
         self.assertIn("OpenRouter: <b>✅ подключён</b>", text)
         self.assertNotIn("secret", text)
 

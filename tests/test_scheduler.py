@@ -207,27 +207,7 @@ class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(bot.sent, (123, "@configured", "HTML"))
 
-    async def test_feed_forward_falls_back_to_userbot_after_bot_api_failure(self) -> None:
-        class Bot:
-            async def forward_message(self, *args, **kwargs):
-                raise RuntimeError("bot api cannot access source")
-
-            async def send_message(self, *args, **kwargs):
-                raise AssertionError("Text fallback should not run when userbot succeeds")
-
-        item = SimpleNamespace(
-            channel_username="alabugapolytech",
-            message_id=123,
-            text="post",
-            url="https://t.me/alabugapolytech/123",
-        )
-
-        with patch("bot.scheduler.forward_post_with_userbot", new=AsyncMock(return_value=True)) as userbot_forward:
-            await _forward_or_send_feed_item(Bot(), SimpleNamespace(), -1001, item)
-
-        userbot_forward.assert_awaited_once()
-
-    async def test_feed_forward_uses_text_fallback_when_forwards_fail(self) -> None:
+    async def test_feed_forward_uses_text_fallback_when_bot_api_forward_fails(self) -> None:
         class Bot:
             async def forward_message(self, *args, **kwargs):
                 raise RuntimeError("bot api cannot access source")
@@ -243,8 +223,7 @@ class ContextAndJokeTests(unittest.IsolatedAsyncioTestCase):
             url="https://t.me/alabugapolytech/123",
         )
 
-        with patch("bot.scheduler.forward_post_with_userbot", new=AsyncMock(return_value=False)):
-            await _forward_or_send_feed_item(bot, SimpleNamespace(), -1001, item)
+        await _forward_or_send_feed_item(bot, SimpleNamespace(), -1001, item)
 
         self.assertEqual(bot.sent, (-1001, "Alabuga Polytech:\n\npost\n\nhttps://t.me/alabugapolytech/123", None))
 

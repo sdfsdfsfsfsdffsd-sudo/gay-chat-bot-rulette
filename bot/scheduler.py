@@ -22,7 +22,6 @@ from bot.sources import (
 )
 from bot.storage import Storage
 from bot.telegram_format import normalize_telegram_html
-from bot.userbot import forward_post_with_userbot
 from bot.word_stats import build_daily_word_stats
 
 
@@ -85,8 +84,6 @@ async def _forward_or_send_feed_item(bot: Bot, settings: Settings, chat_id: int 
             return
         except Exception as error:
             logger.warning("Could not forward Telegram post %s/%s: %s", item.channel_username, item.message_id, error)
-        if await forward_post_with_userbot(settings, chat_id, item.channel_username, item.message_id):
-            return
     await _send_text(bot, chat_id, f"Alabuga Polytech:\n\n{item.text}\n\n{item.url}")
 
 

@@ -106,9 +106,6 @@ class Settings:
     alabuga_enabled: bool
     bot_chat_id: int | None
     admin_user_ids: set[int]
-    telegram_user_api_id: int | None
-    telegram_user_api_hash: str
-    telegram_user_session: str
     bully_target_username: str | None
     timezone: str
     database_path: Path
@@ -330,9 +327,6 @@ def load_settings(overrides: dict[str, str] | None = None, *, require_secrets: b
         alabuga_enabled=_bool_value(get("ALABUGA_ENABLED", "true"), True),
         bot_chat_id=_optional_int(get("BOT_CHAT_ID", "")),
         admin_user_ids=_ints(get("ADMIN_USER_IDS", "")),
-        telegram_user_api_id=_optional_int(get("TELEGRAM_USER_API_ID", "")),
-        telegram_user_api_hash=get("TELEGRAM_USER_API_HASH", "").strip(),
-        telegram_user_session=get("TELEGRAM_USER_SESSION", "").strip(),
         bully_target_username=(get("BULLY_TARGET_USERNAME", get("TARGET_USERNAME", "")) or "").strip().lstrip("@") or None,
         timezone=get("TIMEZONE", "Europe/Warsaw"),
         database_path=_storage_path(get, "DATABASE_PATH", "data/bot.sqlite3", "bot.sqlite3"),

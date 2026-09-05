@@ -112,7 +112,7 @@ The admin panel is organized by tasks rather than environment keys:
 
 - `Автопубликации` shows live on/off states, schedules, and time remaining until each actual scheduler run;
 - `Функции` contains behavior, schedule, prompts, and per-service models;
-- `Подключения` contains Telegram, OpenRouter, forwarding, and sources;
+- `Подключения` contains Telegram Bot API, OpenRouter, and content sources;
 - `Доступ и чат` contains the bound chat and administrator ids;
 - `Расширенные` contains fallback models, prompt files, timezone, and diagnostics.
 
@@ -239,34 +239,14 @@ For administrators:
 
 ## Telegram Forwarding
 
-For Alabuga posts the bot tries three steps:
+Alabuga posts use Telegram Bot API only. The bot first calls `forward_message`.
+A successful Telegram forward automatically preserves the original media,
+caption, and source attribution; media cannot be added to or changed inside an
+already forwarded message.
 
-1. Bot API `forward_message` from the public channel post.
-2. Optional userbot forward through Telethon, if configured.
-3. Text fallback with the post link.
-
-Bot API forwarding can fail when the bot account has no access to the source
-channel or Telegram blocks forwarding. To enable the userbot fallback, create a
-Telegram app at `my.telegram.org`, run:
-
-If Railway logs contain `message to forward not found`, the Bot API path has
-failed and the bot will copy text unless `TELEGRAM_USER_*` userbot settings are
-configured. Check the current state with `/forward_config`.
-
-```bash
-python make_telegram_user_session.py
-```
-
-Then set these values in Railway variables or `/admin`:
-
-```env
-TELEGRAM_USER_API_ID=
-TELEGRAM_USER_API_HASH=
-TELEGRAM_USER_SESSION=
-```
-
-The personal account used for `TELEGRAM_USER_SESSION` must be able to read the
-source channel and must be present in the destination group.
+If the bot cannot access the source post, Telegram returns an error such as
+`message to forward not found`. The bot then sends the parsed text and source
+link as a new message. There is no user-account or Telethon fallback.
 - `/word_stats_now` - prints daily tracked-word stats immediately.
 
 ## Safety Boundaries

@@ -40,7 +40,6 @@ from bot.runtime_config import sync_runtime_config
 from bot.sources import fetch_random_telegram_item
 from bot.storage import Storage
 from bot.telegram_format import normalize_telegram_html
-from bot.userbot import forward_post_with_userbot, missing_userbot_fields, userbot_is_configured
 from bot.word_stats import build_daily_word_stats
 
 
@@ -107,12 +106,7 @@ def command_argument(text: str | None) -> str:
 
 def build_runtime_config_text(settings: Settings, prompts: PromptSet) -> str:
     rows = ["Effective runtime config:"]
-    missing_forward_fields = missing_userbot_fields(settings)
-    rows.append(
-        "telegram_forwarding: "
-        f"userbot={'configured' if userbot_is_configured(settings) else 'missing'} | "
-        f"missing={','.join(missing_forward_fields) if missing_forward_fields else 'none'}"
-    )
+    rows.append("telegram_forwarding: bot_api_only")
     rows.append(f"answer_web_search_enabled={getattr(settings, 'answer_web_search_enabled', True)}")
     rows.append(
         "automations: "
@@ -235,17 +229,12 @@ def build_router(
     async def forward_config(message: Message) -> None:
         if not is_admin(message):
             return
-        await sync_runtime_config(settings, prompts, storage)
-        missing = missing_userbot_fields(settings)
-        status = "configured" if not missing else "missing"
         await message.answer(
-            "<b>Telegram forward config</b>\n\n"
-            f"Bot API forward: <code>enabled</code>\n"
-            f"Userbot forward: <code>{status}</code>\n"
-            f"Missing: <code>{html.escape(', '.join(missing) if missing else 'none')}</code>\n\n"
-            "Если Bot API пишет <code>message to forward not found</code>, нужен userbot: "
-            "<code>TELEGRAM_USER_API_ID</code>, <code>TELEGRAM_USER_API_HASH</code>, "
-            "<code>TELEGRAM_USER_SESSION</code>.",
+            "<b>Telegram-пересылка</b>\n\n"
+            "Режим: <code>только Bot API</code>\n"
+            "Настоящий forward сохраняет исходное медиа и подпись автоматически. "
+            "Если исходный пост недоступен боту, отправляется текст и ссылка; "
+            "добавить медиа внутрь уже пересланного сообщения нельзя.",
             parse_mode="HTML",
         )
 
@@ -609,8 +598,6 @@ def build_router(
                 return
             except Exception as error:
                 logger.warning("Could not forward Telegram post %s/%s: %s", item.channel_username, item.message_id, error)
-            if await forward_post_with_userbot(settings, message.chat.id, item.channel_username, item.message_id):
-                return
         await message.answer(f"Alabuga Polytech:\n\n{item.text[:3400]}\n\n{item.url}")
 
 

@@ -16,7 +16,7 @@ from bot.env_file import read_env
 from setup_cli import DEFAULTS, QUESTIONS
 
 
-SECRET_KEYS = {"TELEGRAM_BOT_TOKEN", "OPENROUTER_API_KEY", "TELEGRAM_USER_API_HASH", "TELEGRAM_USER_SESSION"}
+SECRET_KEYS = {"TELEGRAM_BOT_TOKEN", "OPENROUTER_API_KEY"}
 PROMPT_TEXT_KEYS = {
     "ANSWER_SYSTEM_PROMPT_TEXT": "Системный промпт",
     "SUMMARY_SYSTEM_PROMPT_TEXT": "Системный промпт",
@@ -42,9 +42,6 @@ FIELD_LABELS = {
     "OPENROUTER_API_KEY": "Ключ OpenRouter",
     "BOT_CHAT_ID": "Привязанный чат",
     "ADMIN_USER_IDS": "Администраторы",
-    "TELEGRAM_USER_API_ID": "Telegram API ID",
-    "TELEGRAM_USER_API_HASH": "Telegram API hash",
-    "TELEGRAM_USER_SESSION": "Telegram StringSession",
     "BULLY_TARGET_USERNAME": "Цель буллинга",
     "BULLY_MESSAGE_TEXT": "Текст буллинга",
     "BULLY_EVERY_MINUTES": "Интервал проверки",
@@ -186,8 +183,7 @@ GROUPS: dict[str, AdminGroup] = {
     ),
     "integrations": AdminGroup(
         "🔌 Подключения",
-        "Состояние Telegram, OpenRouter и пересылки. Секреты в админке не отображаются.",
-        fields=("TELEGRAM_USER_API_ID",),
+        "Состояние Telegram и OpenRouter. Секреты в админке не отображаются.",
         children=("sources",),
     ),
     "access": AdminGroup(
@@ -255,7 +251,6 @@ GROUPS: dict[str, AdminGroup] = {
     ),
     "telegram": AdminGroup("🤖 Telegram-бот", "Основной токен Telegram Bot API.", fields=("TELEGRAM_BOT_TOKEN",), parent="integrations"),
     "openrouter": AdminGroup("🧠 OpenRouter", "API-ключ для AI-функций.", fields=("OPENROUTER_API_KEY",), parent="integrations"),
-    "forwarding": AdminGroup("📨 Telegram-пересылка", "Данные userbot для настоящего forward из каналов.", fields=("TELEGRAM_USER_API_ID", "TELEGRAM_USER_API_HASH", "TELEGRAM_USER_SESSION"), parent="integrations"),
     "sources": AdminGroup("🌐 Внешние источники", "Ссылки на каналы и сайты, откуда бот берёт публикации.", fields=("ALABUGA_CHANNEL_URL", "JOKE_SOURCE_URLS"), parent="integrations"),
     "fallback_models": AdminGroup("🧠 Резервные модели", "Модели, используемые как fallback для сервисов.", fields=("OPENROUTER_DEFAULT_MODEL", "OPENROUTER_QUALITY_MODEL", "OPENROUTER_CHEAP_MODEL"), parent="advanced"),
     "prompt_files": AdminGroup("📁 Файлы промптов", "Используются, только если текст промпта не задан через админку.", fields=("SYSTEM_PROMPT_PATH", "SUMMARY_PROMPT_PATH", "CONSPIRACY_PROMPT_PATH", "HOROSCOPE_PROMPT_PATH"), parent="advanced"),
@@ -563,21 +558,12 @@ def admin_group_text(
             return f"<b>{html.escape(group.title)}</b>\n\nДанные подключений пока недоступны."
         bot_status = "✅ подключён" if getattr(settings, "telegram_bot_token", "") else "⛔ не настроен"
         router_status = "✅ подключён" if getattr(settings, "openrouter_api_key", "") else "⛔ не настроен"
-        forwarding_ready = all((
-            getattr(settings, "telegram_user_api_id", None),
-            getattr(settings, "telegram_user_api_hash", ""),
-            getattr(settings, "telegram_user_session", ""),
-        ))
-        forwarding_status = "✅ подключена" if forwarding_ready else "⛔ не настроена полностью"
-        api_id = getattr(settings, "telegram_user_api_id", None)
-        api_id_text = str(api_id) if api_id is not None else "не задан"
         return (
             f"<b>{html.escape(group.title)}</b>\n\n"
             f"🤖 Telegram-бот: <b>{bot_status}</b>\n"
-            f"📨 Telegram-пересылка: <b>{forwarding_status}</b>\n"
-            f"└ API ID: <code>{html.escape(api_id_text)}</code>\n"
+            "📨 Telegram-пересылка: <b>Bot API</b>\n"
             f"🧠 OpenRouter: <b>{router_status}</b>\n\n"
-            "<i>Токены, API hash и StringSession скрыты и изменяются только в переменных окружения.</i>"
+            "<i>Токены скрыты и изменяются только в переменных окружения.</i>"
         )
     if group_key == "access":
         if settings is None:
