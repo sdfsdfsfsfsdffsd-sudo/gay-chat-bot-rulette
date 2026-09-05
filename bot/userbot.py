@@ -29,6 +29,21 @@ def missing_userbot_fields(settings: "Settings") -> list[str]:
     return missing
 
 
+async def _resolve_target_dialog(client, target_chat_id: int):
+    try:
+        return await client.get_input_entity(target_chat_id)
+    except (TypeError, ValueError):
+        pass
+
+    async for dialog in client.iter_dialogs():
+        if dialog.id == target_chat_id:
+            return dialog.input_entity
+    raise ValueError(
+        f"Target chat {target_chat_id} is not available to the Telegram user account. "
+        "Add that account to the destination chat first."
+    )
+
+
 async def forward_post_with_userbot(
     settings: "Settings",
     target_chat_id: int,
@@ -50,15 +65,23 @@ async def forward_post_with_userbot(
             settings.telegram_user_api_id,
             settings.telegram_user_api_hash,
         ) as client:
-            target = await client.get_entity(target_chat_id)
-            source = await client.get_entity(channel_username)
+            target = await _resolve_target_dialog(client, target_chat_id)
+            source = await client.get_input_entity(channel_username)
             await client.forward_messages(target, message_id, source)
+        logger.info(
+            "Forwarded Telegram post with user account: source=%s/%s target=%s",
+            channel_username,
+            message_id,
+            target_chat_id,
+        )
         return True
     except Exception as error:
         logger.warning(
-            "Could not forward Telegram post with userbot %s/%s: %s",
+            "Could not forward Telegram post with userbot %s/%s to %s: %s: %s",
             channel_username,
             message_id,
+            target_chat_id,
+            type(error).__name__,
             error,
         )
         return False
